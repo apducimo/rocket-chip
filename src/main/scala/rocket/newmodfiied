@@ -1,0 +1,70 @@
+class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModule()(p) {
+  val io = new Bundle {
+    val req = Valid(new DCacheDataReq).flip
+    val resp = Vec(nWays, UInt(width = req.bits.wdata.getWidth )).asOutput
+    val resp_vector = Vec(nWays, UInt(width = 256 )).asOutput
+  }
+
+  require(rowBytes % wordBytes == 0)
+
+  val Rtagt = Cat (UInt(0), UInt(0), UInt(0), io.req.bits.addr)
+  val Rtag = Rtagt (5, 0)
+  val Rbyteoff = Rtag >> 3
+  val word = Rbyteoff
+  val wordinHL =Rbyteoff(1, 0)
+  val temp_input_mask = io.req.bits.eccMask
+  val sel0 = (wordinHL === UInt(0x0))
+  val sel1 = (wordinHL === UInt(0x1))
+  val sel2 = (wordinHL === UInt(0x2))
+  val sel3 = (wordinHL === UInt(0x3))
+  val shiftedmask = Mux(sel3, temp_input_mask <<  24, Mux(sel2, Cat (UInt(1<<8)(7,0), temp_input_mask <<  16), Mux(sel1, Cat (UInt(1<<8)(7,0),UInt(1<<8)(7,0), temp_input_mask <<  8) , Mux(sel0, Cat (UInt(1<<8)(7,0),UInt(1<<8)(7,0),UInt(1<<8)(7,0), temp_input_mask), UInt(0)))))
+
+  val eccMask = if (eccBits == wordBits) Seq(true.B) else shiftedmask.toBools
+  val wMask = if (nWays == 1) eccMask else (0 until nWays).flatMap(i => eccMask.map(_ && io.req.bits.way_en(i)))
+
+  val vectordatatemp = Mux(sel3,io.req.bits.wdata << 192 , Mux(sel2, Cat (UInt(1<<64)(63,1), UInt (0), io.req.bits.wdata <<  128), Mux(sel1,Cat (UInt(1<<64)(63,1), UInt (0),UInt(1<<64)(63,1),UInt (0), io.req.bits.wdata <<  64) , Mux(sel0,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0), io.req.bits.wdata), UInt(0)))))
+  val wWords = vectordatatemp.grouped(256)
+
+  val addr = io.req.bits.addr >> 5
+  val data_arrays = Seq.fill(rowBytes / wordBytes) { SeqMem(nSets * 2/*HL*/, Vec(nWays * (32), UInt(width = encBits))) }
+  val rdata = for ((array, i) <- data_arrays zipWithIndex) yield {
+
+    val valid = io.req.valid && (Bool(data_arrays.size == 1) || io.req.bits.wordMask(i))
+    when (valid && io.req.bits.write){
+      printf ("[TCSAddr]%x w ============================================================================================================= \n",io.req.bits.addr)
+      printf ("[TCSAddr]%x w io.addr %x  io.eccmask [%x] io.wayen[%b][%b][%b][%b] io.wdata[%x] wordinhl[%d] sel[%b][%b][%b][%b] addr %x  shiftedmask[%x] wwrods[%x]\n", io.req.bits.addr, io.req.bits.addr,io.req.bits.eccMask,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),io.req.bits.wdata, wordinHL, sel3, sel2, sel1, sel0,addr,shiftedmask, wWords(0))
+  
+        printf ("[TCSAddr]%x w wMask %b  %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b \n",io.req.bits.addr, wMask(0), wMask(8), wMask(16), wMask(24), wMask(32), wMask(40),wMask(41),wMask(42),wMask(43),wMask(44),wMask(45),wMask(46),wMask(47),wMask(48), wMask(56), wMask(64), wMask(72), wMask(80), wMask(88), wMask(96), wMask(104), wMask(112),wMask(120))
+
+      printf("[TCSAddr]%x w \n\n", io.req.bits.addr)
+    }
+
+    when (valid && !io.req.bits.write){
+      printf ("[TCSAddr]%x r ============================================================================================================= \n", io.req.bits.addr)
+      printf ("[TCSAddr]%x r io.addr %x io.wayen[%b][%b][%b][%b] addr %x\n", io.req.bits.addr,io.req.bits.addr,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),addr)
+    }
+
+    when (valid && io.req.bits.write) {
+      val wData = wWords(i).grouped(encBits)
+      array.write(addr, Vec((0 until nWays).flatMap(i => wData)), wMask)//32 byte is written into the cache for four ways simultaneously
+
+      val temp_print_wData= Vec((0 until nWays).flatMap(i => wData)).grouped(128).map(_.asUInt).toSeq
+      printf ("[TCSAddr]%x w array.write.data %x \n",io.req.bits.addr, temp_print_wData(0))
+      printf("[TCSAddr]%x w \n\n",io.req.bits.addr)
+      printf ("[TCSAddr]%x w ============================================================================================================= \n",io.req.bits.addr)
+    }
+    val data = array.read(addr, valid && !io.req.bits.write)//4*32B is read
+    when (valid && !io.req.bits.write){
+     // printf("[tttt] %x \n", data(0).asUInt)
+      //val  temp_data = data.grouped(32).map(_.asUInt).toSeq //grouped into 4 32B
+      //val temp_read_data = data.grouped(128).map(_.asUInt).toSeq
+      //printf ("[TCSAddr]%x r readdata %x \n", io.req.bits.addr,temp_read_data(0))
+      //printf("[TCSAddr]%x r \n\n",io.req.bits.addr)
+      //printf ("[TCSAddr]%x r readdata_grouped %x %x %x %x \n",io.req.bits.addr, temp_data(3),temp_data(2),temp_data(1),temp_data(0))
+      printf ("[TCSAddr]%x r ============================================================================================================= \n", io.req.bits.addr)
+    }
+    data.grouped(32).map(_.asUInt).toSeq //grouped into 4 32B
+  }
+  (io.resp_vector zip rdata.transpose).foreach { case (resp_vector, data) => resp_vector := data.asUInt }
+}
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -1,4 +1,4 @@
-// See LICENSE.SiFive for license details.
+// See LICENSllaE.SiFive for license details.
 // See LICENSE.Berkeley for license details.
 
 package freechips.rocketchip.rocket
@@ -92,6 +92,9 @@ abstract class L1HellaCacheBundle(implicit val p: Parameters) extends Parameteri
 
 trait HasCoreMemOp extends HasCoreParameters {
   val addr = UInt(width = coreMaxAddrBits)
+  //zazad begins
+  val return_addr = UInt(width = coreMaxAddrBits)
+  //zazad ends
   val tag  = Bits(width = dcacheReqTagBits)
   val cmd  = Bits(width = M_SZ)
   val typ  = Bits(width = MT_SZ)
@@ -99,10 +102,22 @@ trait HasCoreMemOp extends HasCoreParameters {
 
 trait HasCoreData extends HasCoreParameters {
   val data = Bits(width = coreDataBits)
+  //zazad begins
+  val DcacheCpu_data = Bits(width = 256)
+  val DcacheCpu_vector_data = Bits(width = 256)
+  //zazad ends
 }
 
 class HellaCacheReqInternal(implicit p: Parameters) extends CoreBundle()(p) with HasCoreMemOp {
   val phys = Bool()
+  //zazad begins
+  val isvector = Bool()
+  //true is unit-stride and false is scatter_gather
+  val vector_cache_access_type = Bool()
+  val cnt_cache_vsd = Bits(width = 5)
+  val element_number = UInt(width = 5)
+  val is_cache_access_vec = Bool()
+  //zazad ends
 }
 
 class HellaCacheReq(implicit p: Parameters) extends HellaCacheReqInternal()(p) with HasCoreData
@@ -115,6 +130,12 @@ class HellaCacheResp(implicit p: Parameters) extends CoreBundle()(p)
   val data_word_bypass = Bits(width = coreDataBits)
   val data_raw = Bits(width = coreDataBits)
   val store_data = Bits(width = coreDataBits)
+
+  //zazad begins
+  val DcacheCpu_data_word_bypass = Bits(width = 256)
+  val DcacheCpu_store_data = Bits(width = 256)
+  val DcacheCpu_data_raw = Bits(width = 256)
+  //zazad ends
 }
 
 class AlignmentExceptions extends Bundle {
@@ -133,6 +154,11 @@ class HellaCacheWriteData(implicit p: Parameters) extends CoreBundle()(p) {
   val mask = UInt(width = coreDataBytes)
 }
 
+class HellaCacheWriteData_extended(implicit p: Parameters) extends CoreBundle()(p) {
+  val data = UInt(width = 256)
+  val mask = UInt(width = 32)
+}
+
 class HellaCachePerfEvents extends Bundle {
   val acquire = Bool()
   val release = Bool()
@@ -144,6 +170,10 @@ class HellaCacheIO(implicit p: Parameters) extends CoreBundle()(p) {
   val req = Decoupled(new HellaCacheReq)
   val s1_kill = Bool(OUTPUT) // kill previous cycle's req
   val s1_data = new HellaCacheWriteData().asOutput // data for previous cycle's req
+  //zazad begins
+  val DcacheCpu_s1_data = new HellaCacheWriteData_extended().asOutput // data for previous cycle's req
+  //zazad ends
+
   val s2_nack = Bool(INPUT) // req from two cycles ago is rejected
 
   val resp = Valid(new HellaCacheResp).flip

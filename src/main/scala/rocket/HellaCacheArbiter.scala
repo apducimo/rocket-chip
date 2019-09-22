@@ -32,12 +32,22 @@ class HellaCacheArbiter(n: Int)(implicit p: Parameters) extends Module
         io.mem.req.bits.typ := req.bits.typ
         io.mem.req.bits.addr := req.bits.addr
         io.mem.req.bits.phys := req.bits.phys
+        //zazad begins
+        io.mem.req.bits.isvector := req.bits.isvector
+        io.mem.req.bits.vector_cache_access_type := req.bits.vector_cache_access_type
+        io.mem.req.bits.cnt_cache_vsd := req.bits.cnt_cache_vsd
+        io.mem.req.bits.element_number := req.bits.element_number
+        printf("[checkcachecounter]#########################insdie hellacachearbiter elemnt_number %x  %x \n", io.mem.req.bits.element_number, req.bits.element_number)
+        io.mem.req.bits.is_cache_access_vec := req.bits.is_cache_access_vec
+        io.mem.req.bits.return_addr := req.bits.addr
+        //zazad ends
         io.mem.req.bits.tag := Cat(req.bits.tag, UInt(i, log2Up(n)))
         s1_id := UInt(i)
       }
       def connect_s1() = {
         io.mem.s1_kill := io.requestor(i).s1_kill
         io.mem.s1_data := io.requestor(i).s1_data
+        io.mem.DcacheCpu_s1_data := io.requestor(i).DcacheCpu_s1_data 
       }
 
       if (i == n-1) {

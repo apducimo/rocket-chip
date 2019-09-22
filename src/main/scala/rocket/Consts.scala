@@ -9,13 +9,13 @@ import scala.math._
 trait ScalarOpConstants {
   val MT_SZ = 3
   def MT_X  = BitPat("b???")
-  def MT_B  = UInt("b000")
-  def MT_H  = UInt("b001")
-  def MT_W  = UInt("b010")
-  def MT_D  = UInt("b011")
-  def MT_BU = UInt("b100")
-  def MT_HU = UInt("b101")
-  def MT_WU = UInt("b110")
+  def MT_B  = UInt("b000")//byte
+  def MT_H  = UInt("b001")//half word 16 bit==>sign extend to 32/64 regsize
+  def MT_W  = UInt("b010")//word 32 bit
+  def MT_D  = UInt("b011")//double word 64 bit
+  def MT_BU = UInt("b100")//byte 
+  def MT_HU = UInt("b101")//half word ==> zero extend to 32/64 regsize
+  def MT_WU = UInt("b110")//word
   def mtSize(mt: UInt) = mt(MT_SZ-2, 0)
   def mtSigned(mt: UInt) = !mt(MT_SZ-1)
 

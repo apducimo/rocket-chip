@@ -27,9 +27,97 @@ class StoreGen(typ: UInt, addr: UInt, dat: UInt, maxSize: Int) {
 
   def data = genData(0)
   def wordData = genData(2)
+
+
+ //zazad begins
+def vectormask = {
+  val Rtagt = Cat (UInt(0), UInt(0), UInt(0), addr)
+  val Rtag = Rtagt (5, 0)
+  val Rbyteoff = Rtag >> 3
+  val word = Rbyteoff
+   val wordinHL =Rbyteoff(1, 0)
+  printf("[cacheaccesstestmodword] addr %x Rtag[%x] Rbyteoff[%x] word[%x] wordinHL[%x] \n",addr, Rtag, Rbyteoff, word, wordinHL)
+  val sel0 = (wordinHL === UInt(0x0))
+  val sel1 = (wordinHL === UInt(0x1))
+  val sel2 = (wordinHL === UInt(0x2))
+  val sel3 = (wordinHL === UInt(0x3))
+  val shiftedmask = Mux(sel3, mask <<  24, Mux(sel2, Cat (UInt(1<<8)(7,0), mask <<  16), Mux(sel1, Cat (UInt(1<<8)(7,0),UInt(1<<8)(7,0), mask <<  8) , Mux(sel0, Cat (UInt(1<<8)(7,0),UInt(1<<8)(7,0),UInt(1<<8)(7,0), mask), UInt(0)))))
+
+  shiftedmask
+}
+  
+def vectordata = {
+    val Rtagt = Cat (UInt(0), UInt(0), UInt(0), addr)
+    val Rtag = Rtagt (5, 0)
+    val Rbyteoff = Rtag >> 3
+    val word = Rbyteoff
+    val wordinHL =Rbyteoff(1, 0)
+    val sel0 = (wordinHL === UInt(0x0))
+    val sel1 = (wordinHL === UInt(0x1))
+    val sel2 = (wordinHL === UInt(0x2))
+    val sel3 = (wordinHL === UInt(0x3))
+    val vectordatatemp = Mux(sel3,data << 192 , Mux(sel2, Cat (UInt(1<<64)(63,1), UInt (0), data <<  128), Mux(sel1,Cat (UInt(1<<64)(63,1), UInt (0),UInt(1<<64)(63,1),UInt (0), data <<  64) , Mux(sel0,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0), data), UInt(0)))))
+
+    vectordatatemp
 }
 
-class LoadGen(typ: UInt, signed: Bool, addr: UInt, dat: UInt, zero: Bool, maxSize: Int) {
+  def vectordata_main = {
+    val Rtagt = Cat (UInt(0), UInt(0), UInt(0), addr)
+     val Rtag = Rtagt (5, 0)
+    val Rbyteoff = Rtag >> 3
+    val word = Rbyteoff
+    val wordinHL =Rbyteoff(1, 0)
+    val sel0 = (wordinHL === UInt(0x0))
+    val sel1 = (wordinHL === UInt(0x1))
+    val sel2 = (wordinHL === UInt(0x2))
+    val sel3 = (wordinHL === UInt(0x3))
+    val vectordatatemp = Mux(sel3,dat << 192 , Mux(sel2, Cat (UInt(1<<64)(63,1), UInt (0), dat <<  128), Mux(sel1,Cat (UInt(1<<64)(63,1), UInt (0),UInt(1<<64)(63,1),UInt (0), dat <<  64) , Mux(sel0,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0), dat), UInt(0)))))
+
+    vectordatatemp
+  }
+
+  def vectorwordData = {
+   
+    val Rtagt = Cat (UInt(0), UInt(0), UInt(0), addr)
+     val Rtag = Rtagt (5, 0)
+    val Rbyteoff = Rtag >> 3
+    val word = Rbyteoff
+   val wordinHL =Rbyteoff(1, 0)
+    val sel0 = (wordinHL === UInt(0x0))
+    val sel1 = (wordinHL === UInt(0x1))
+    val sel2 = (wordinHL === UInt(0x2))
+    val sel3 = (wordinHL === UInt(0x3))
+    val vectorwordDatatemp = Mux(sel3,wordData << 192, Mux(sel2,Cat (UInt(1<<64)(63,1),UInt (0), wordData <<  128) , Mux(sel1,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0), wordData <<  64) , Mux(sel0,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),wordData), UInt(0)))))
+
+    vectorwordDatatemp
+  }
+
+    def vectorwordData_main = {
+    val Rtagt = Cat (UInt(0), UInt(0), UInt(0), addr)
+     val Rtag = Rtagt (5, 0)
+    val Rbyteoff = Rtag >> 3
+    val word = Rbyteoff
+   val wordinHL =Rbyteoff(1, 0)
+    val sel0 = (wordinHL === UInt(0x0))
+    val sel1 = (wordinHL === UInt(0x1))
+    val sel2 = (wordinHL === UInt(0x2))
+    val sel3 = (wordinHL === UInt(0x3))
+    val vectorwordDatatemp = Mux(sel3,dat << 192, Mux(sel2,Cat (UInt(1<<64)(63,1),UInt (0), dat <<  128) , Mux(sel1,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0), dat <<  64) , Mux(sel0,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),dat), UInt(0)))))
+
+    vectorwordDatatemp
+  }
+
+  def Resvectordata = vectordata
+  def ResvectorwordData = vectorwordData 
+  def Resvectormask = vectormask
+  def ResvectorwordData_main = vectorwordData_main
+  def Resvectordata_main= vectordata_main
+
+//zazad ends
+
+}
+
+class LoadGen(typ: UInt, signed: Bool, addr: UInt, dat: UInt, extendeddat: UInt, zero: Bool, maxSize: Int) {
   private val size = new StoreGen(typ, addr, dat, maxSize).size
 
   private def genData(logMinSize: Int): UInt = {
@@ -46,6 +134,36 @@ class LoadGen(typ: UInt, signed: Bool, addr: UInt, dat: UInt, zero: Bool, maxSiz
 
   def wordData = genData(2)
   def data = genData(0)
+//zazad begins
+  def extractword = {
+   val Rtagt = Cat (UInt(0), UInt(0), UInt(0), addr)
+   val Rtag = Rtagt (5, 0)
+   val Rbyteoff = Rtag >> 3
+   val word = Rbyteoff
+   val wordinHL =Rbyteoff(1, 0)
+   val sel0 = (wordinHL === UInt(0x0))
+   val sel1 = (wordinHL === UInt(0x1))
+   val sel2 = (wordinHL === UInt(0x2))
+   val sel3 = (wordinHL === UInt(0x3))
+   val extractedword = Mux(sel3,extendeddat (255,192), Mux(sel2,extendeddat (191,128) , Mux(sel1,extendeddat (127,64) , Mux(sel0,extendeddat (63,0), UInt(0)))))
+   extractedword
+  }
+  private def vecgenData(logMinSize: Int): UInt = {
+    var res = extractword
+    for (i <- log2Up(maxSize)-1 to logMinSize by -1) {
+      val pos = 8 << i
+      val shifted = Mux(addr(i), res(2*pos-1,pos), res(pos-1,0))
+      val doZero = Bool(i == 0) && zero
+      val zeroed = Mux(doZero, UInt(0), shifted)
+      res = Cat(Mux(size === UInt(i) || doZero, Fill(8*maxSize-pos, signed && zeroed(pos-1)), res(8*maxSize-1,pos)), zeroed)
+    }
+    res
+  }
+
+  def extracteddatafromvec = vecgenData (0)
+  def extractedwordDatafromvec = vecgenData (2)
+//zazad ends
+
 }
 
 class AMOALU(operandBits: Int)(implicit p: Parameters) extends Module {

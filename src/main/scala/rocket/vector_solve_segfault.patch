@@ -1,0 +1,79 @@
+diff --git a/src/main/scala/rocket/DCache.scala b/src/main/scala/rocket/DCache.scala
+index 869226da..c1ce1246 100644
+--- a/src/main/scala/rocket/DCache.scala
++++ b/src/main/scala/rocket/DCache.scala
+@@ -32,7 +32,8 @@ class DCacheDataReq(implicit p: Parameters) extends L1HellaCacheBundle()(p) {
+   val way_en = Bits(width = nWays)
+   val vector_cache_access_type = Bool()
+   val cnt_cache_vsd = Bits (width = 5)
+-
++  val element_number = UInt(width = 5)
++  val is_cache_access_vec = Bool()
+ }
+ 
+ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModule()(p) {
+@@ -64,7 +65,8 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
+   //generate mask based on the element position in the cache line
+   //2 bytes masks for 16-bit width data elements
+   val mask_vector_offset = Rtagt (4,0)
+-  val s1_vmaskval = UInt("hffffffff")
++  //val s1_vmaskval = UInt("hffffffff")
++  val s1_vmaskval = Cat(UInt(1) << (UInt(32)-(io.req.bits.element_number*UInt(2))), UInt(1) << (io.req.bits.element_number*UInt(2)) - UInt(1))(31,0)
+   val element_size_in_byte = UInt(2)
+   val scatter_gather_vmaskval = Wire(UInt(32.W))
+   val scatter_gather_vwdata   = Wire(UInt(256.W))
+@@ -75,6 +77,7 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
+   val vwdataval= Mux(io.req.bits.vector_cache_access_type, io.req.bits.vwdata , scatter_gather_vwdata)
+   val vmaskval = Mux(io.req.bits.vector_cache_access_type, s1_vmaskval, scatter_gather_vmaskval)
+   //printf("[checkcachecounter]###insidecache cnt_cache_vsd %d  mask_vector_offset %d scatter_gather_mask %x maskval %x cacheaccesstype %b  data %x extracted_data %x scatter %x final %x\n",io.req.bits.cnt_cache_vsd, mask_vector_offset, scatter_gather_vmaskval, vmaskval, io.req.bits.vector_cache_access_type, io.req.bits.vwdata,extracted_bits, scatter_gather_vwdata, vwdataval)
++  printf("[checkcachecounter] +++++++++++insidedcache #element %x  s1_vmaskval %x scatter_gather_vmaskval %x  vector_cache_access_type %x final vmaskval %x \n ", io.req.bits.element_number, s1_vmaskval, scatter_gather_vmaskval, io.req.bits.vector_cache_access_type, vmaskval)
+   val veccMask = vmaskval.toBools
+   val vwMask = if (nWays == 1) veccMask else (0 until nWays).flatMap(i => veccMask.map(_ && io.req.bits.way_en(i)))
+   val vwWords = vwdataval.grouped(256)
+diff --git a/src/main/scala/rocket/HellaCache.scala b/src/main/scala/rocket/HellaCache.scala
+index 513abd17..84495dce 100644
+--- a/src/main/scala/rocket/HellaCache.scala
++++ b/src/main/scala/rocket/HellaCache.scala
+@@ -115,6 +115,8 @@ class HellaCacheReqInternal(implicit p: Parameters) extends CoreBundle()(p) with
+   //true is unit-stride and false is scatter_gather
+   val vector_cache_access_type = Bool()
+   val cnt_cache_vsd = Bits(width = 5)
++  val element_number = UInt(width = 5)
++  val is_cache_access_vec = Bool()
+   //zazad ends
+ }
+ 
+diff --git a/src/main/scala/rocket/HellaCacheArbiter.scala b/src/main/scala/rocket/HellaCacheArbiter.scala
+index 057ef6fa..7348f2ac 100644
+--- a/src/main/scala/rocket/HellaCacheArbiter.scala
++++ b/src/main/scala/rocket/HellaCacheArbiter.scala
+@@ -36,6 +36,8 @@ class HellaCacheArbiter(n: Int)(implicit p: Parameters) extends Module
+         io.mem.req.bits.isvector := req.bits.isvector
+         io.mem.req.bits.vector_cache_access_type := req.bits.vector_cache_access_type
+         io.mem.req.bits.cnt_cache_vsd := req.bits.cnt_cache_vsd
++        io.mem.req.bits.element_number := req.bits.element_number
++        io.mem.req.bits.is_cache_access_vec := req.bits.is_cache_access_vec
+         io.mem.req.bits.return_addr := req.bits.addr
+         //zazad ends
+         io.mem.req.bits.tag := Cat(req.bits.tag, UInt(i, log2Up(n)))
+diff --git a/src/main/scala/rocket/RocketCore.scala b/src/main/scala/rocket/RocketCore.scala
+index a7373cab..2440e6c2 100644
+--- a/src/main/scala/rocket/RocketCore.scala
++++ b/src/main/scala/rocket/RocketCore.scala
+@@ -1255,6 +1255,8 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
+   io.dmem.req.bits.phys := Bool(false)
+   io.dmem.req.bits.vector_cache_access_type := stride_vsd === UInt(1)
+   io.dmem.req.bits.cnt_cache_vsd := cnt_cache_vsd
++  io.dmem.req.bits.element_number := number_of_elements
++  io.dmem.req.bits.is_cache_access_vec := ex_ctrl.vec && ex_ctrl.mem
+     //add cache count, I assume it depends on the elements size here is 16 bits or 2 byte so the address increases by two in each access
+     // val offset = UInt(32) * cnt_cache
+   val offset =Wire(UInt(10.W))
+@@ -1419,6 +1421,7 @@ when(id_inst(0) === "h0005c58b".U || ex_reg_inst ===  "h0005c58b".U || mem_reg_i
+     printf("[checkcachecounter]id_inst %x (alu_fn %x scatter %b v %b vec %b mem %b)ex %x (alu_fn %x scatter %b v %b vec %b mem %b)mem %x (alu_fn %x scatter %b v %b vec %b mem %b)wb %x vwb_wen %b vrf_mem_value %x \n", id_inst(0),ex_ctrl.alu_fn, ex_ctrl.scatter_gather, ex_reg_valid, ex_ctrl.vec, ex_ctrl.mem,  ex_reg_inst,mem_ctrl.alu_fn,mem_ctrl.scatter_gather, mem_reg_valid, mem_ctrl.vec,mem_ctrl.mem, mem_reg_inst,wb_ctrl.alu_fn,wb_ctrl.scatter_gather, wb_reg_valid, wb_ctrl.vec, wb_ctrl.mem, wb_reg_inst,vwb_wen,vrf_mem_value)
+   
+  }
++  
+   printf("[checkcachecounter]id_inst %x (alu_fn %x scatter %b v %b vec %b mem %b)ex %x (alu_fn %x scatter %b v %b vec %b mem %b)mem %x (alu_fn %x scatter %b v %b vec %b mem %b)wb %x vwb_wen %b vrf_mem_value %x \n", id_inst(0),ex_ctrl.alu_fn, ex_ctrl.scatter_gather, ex_reg_valid, ex_ctrl.vec, ex_ctrl.mem,  ex_reg_inst,mem_ctrl.alu_fn,mem_ctrl.scatter_gather, mem_reg_valid, mem_ctrl.vec,mem_ctrl.mem, mem_reg_inst,wb_ctrl.alu_fn,wb_ctrl.scatter_gather, wb_reg_valid, wb_ctrl.vec, wb_ctrl.mem, wb_reg_inst,vwb_wen,vrf_mem_value)
+ 
+   io.dmem.s1_data.data := Mux(mem_ctrl.vec,v_mem_reg_rs2(63,0),(if (fLen == 0) mem_reg_rs2 else Mux(mem_ctrl.fp, Fill((xLen max fLen) / fLen, io.fpu.store_data), mem_reg_rs2)))

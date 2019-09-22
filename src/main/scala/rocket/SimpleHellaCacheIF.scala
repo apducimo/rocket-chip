@@ -125,7 +125,7 @@ class SimpleHellaCacheIF(implicit p: Parameters) extends Module
   io.cache.req <> req_arb.io.out
   io.cache.s1_kill := io.cache.s2_nack
   io.cache.s1_data.data := RegEnable(req_arb.io.out.bits.data, s0_req_fire)
-
+ // printf("[removecacheininterface] %x %x\n", req_arb.io.out.bits.data, io.cache.s1_data.data)
   replayq.io.nack.valid := (io.cache.s2_nack || s2_kill) && s2_req_fire
   replayq.io.nack.bits := s2_req_tag
   replayq.io.resp := io.cache.resp
