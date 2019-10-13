@@ -34,6 +34,7 @@ class DCacheDataReq(implicit p: Parameters) extends L1HellaCacheBundle()(p) {
   val cnt_cache_vsd = Bits (width = 5)
   val element_number = UInt(width = 5)
   val is_cache_access_vec = Bool()
+  val vec_scalar          = Bool()
 }
 
 class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModule()(p) {
@@ -65,7 +66,7 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
   //2 bytes masks for 16-bit width data elements
   val mask_vector_offset = Rtagt (4,0)
   //val s1_vmaskval = UInt("hffffffff")
-  val s1_vmaskval = Cat(UInt(1) << (UInt(32)-(io.req.bits.element_number*UInt(2))), ((UInt(1) << (io.req.bits.element_number*UInt(2))) - UInt(1)))(31,0)
+  val s1_vmaskval = Mux(io.req.bits.vec_scalar, UInt(1)(31,0), Cat(UInt(1) << (UInt(32)-(io.req.bits.element_number*UInt(2))), ((UInt(1) << (io.req.bits.element_number*UInt(2))) - UInt(1)))(31,0))
   val s1_vmaskval_shift_offset = (s1_vmaskval << io.req.bits.addr(4,0))(31,0) 
   val element_size_in_byte = UInt(2)
   val scatter_gather_vmaskval = Wire(UInt(32.W))
@@ -1090,7 +1091,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     io.cpu.resp.bits.replay := true
     io.cpu.resp.bits.addr := s2_uncached_resp_addr
   }
-
+  printf("[DCache]: io.cpu.resp.valid %x s2_valid_hit %x doUncachedResp %x s2_valid_hit_pre_data_ecc %x modified2_s2_data_error %x s2_waw_hazard %x s2_store_merge %x\n [DCache]: s2_valid_masked %x s2_readwrite %x s2_meta_error %x s2_hit %x\n [DCache]: s2_valid %x Reg(next = !s1_nack) %x s2_valid_pre_xcpt %x io.cpu.s2_xcpt.asUInt.orR %x\n [DCache]: s1_nack %x io.cpu.req.fire %x io.cpu.req.ready %x io.cpu.req.valid %x\n", io.cpu.resp.valid, s2_valid_hit, doUncachedResp, s2_valid_hit_pre_data_ecc, modified2_s2_data_error, s2_waw_hazard, s2_store_merge, s2_valid_masked, s2_readwrite, s2_meta_error, s2_hit, s2_valid, Reg(next = !s1_nack), s2_valid_pre_xcpt, io.cpu.s2_xcpt.asUInt.orR, s1_nack, io.cpu.req.fire, io.cpu.req.ready, io.cpu.req.valid);
   //printf("[justprintinsts] uncached %b tl.fire %b replay_next %b io.cpu.resp.valid %b s2_valid_hit %b miss_cached %b uncached_pending %b release_state %d =s_ready %b cached_grant_wait %b s1_nack %b \n", grantIsUncachedData, tl_out.d.fire(), io.cpu.replay_next,io.cpu.resp.valid, s2_valid_hit, s2_valid_cached_miss, s2_valid_uncached_pending,release_state, (release_state === s_ready),cached_grant_wait,s1_nack);
   // load data subword mux/sign extension
  //comment_final_dcache  val s2_data_word = ((0 until rowBits by wordBits).map(i => s2_data_uncorrected(wordBits+i-1,i)): Seq[UInt])(s2_word_idx)
