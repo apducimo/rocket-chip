@@ -117,7 +117,8 @@ class HellaCacheReqInternal(implicit p: Parameters) extends CoreBundle()(p) with
   val cnt_cache_vsd = Bits(width = 5)
   val element_number = UInt(width = 5)
   val is_cache_access_vec = Bool()
-  //zazad ends
+  val vec_scalar = Bool ()
+//zazad ends
 }
 
 class HellaCacheReq(implicit p: Parameters) extends HellaCacheReqInternal()(p) with HasCoreData
