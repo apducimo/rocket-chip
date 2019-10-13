@@ -44,7 +44,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   //val state = Reg(init=s_ready)
 
 //  printf("[checkcachecounter]VVVVVVVVEEEEEEEEECCCCCCCCCCTTTTTTTTOOOOOOOORRRRRRRR io.cpu.req.bits.number_of_elements %x \n", io.req.bits.number_of_elements)
-  val reduction_sum = Bool(false)
+  val reduction_sum = (io.req.bits.fn === ALU.FN_VFREDSUM)
   val counter_num = Reg(init = UInt(0,1))
   val req = Reg(io.req.bits)
   val start_count = Wire(Bool())
@@ -96,7 +96,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
 
    for(i <- 0 until 4) {
      Adders(i).a := (((io.req.bits.in1 >> counter_num * UInt(128))(127,0)) >> 16*(2*i))(15,0)
-     Adders(i).b := (((io.req.bits.in2 >> counter_num * UInt(128))(127,0)) >> 16*(2*i+1))(15,0) 
+     Adders(i).b := (((io.req.bits.in1 >> counter_num * UInt(128))(127,0)) >> 16*(2*i+1))(15,0) 
      adder_out(i) := Adders(i).result
    }
   
@@ -269,7 +269,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   /////////////////////////////////////////////////////////////////////
   val prev_alu_func = Reg(UInt(width = SZ_ALU_VFN.getWidth))
   prev_alu_func := io.req.bits.fn
-  val v_alu_out = Mux(/*io.req.bits.*/ io.req.bits.number_of_elements <= n, Mux(io.req.bits.fn === ALU.FN_VADD, adder_out_cat , Mux(io.req.bits.fn ===  ALU.FN_VMUL, multiplier_out_cat, Mux(io.req.bits.fn ===  ALU.FN_VFMADD, MulAdd_out_cat, Mux(io.req.bits.fn ===  ALU.FN_VFMIN, min_out_cat, Mux(io.req.bits.fn === ALU.FN_VBCASTX, vbcastx_out_cat, max_out_cat))))), Mux(prev_alu_func ===  ALU.FN_VADD, Reg_adder_out, Mux(prev_alu_func ===  ALU.FN_VMUL, Reg_multiplier_out, Mux(prev_alu_func ===  ALU.FN_VFMADD, Reg_MulAdd_out, Mux(prev_alu_func ===  ALU.FN_VFMIN, Reg_min_out,Mux(prev_alu_func === ALU.FN_VBCASTX, Reg_vbcastx_out, Reg_max_out))))))
+  val v_alu_out = Mux(/*io.req.bits.*/ io.req.bits.number_of_elements <= n, Mux(io.req.bits.fn === ALU.FN_VADD, adder_out_cat , Mux(io.req.bits.fn ===  ALU.FN_VMUL, multiplier_out_cat, Mux(io.req.bits.fn ===  ALU.FN_VFMADD, MulAdd_out_cat, Mux(io.req.bits.fn ===  ALU.FN_VFMIN, min_out_cat, Mux(io.req.bits.fn === ALU.FN_VBCASTX, vbcastx_out_cat, max_out_cat))))), Mux(io.req.bits.fn === ALU.FN_VFREDSUM, Reg_redsum_out, Mux(prev_alu_func ===  ALU.FN_VADD, Reg_adder_out, Mux(prev_alu_func ===  ALU.FN_VMUL, Reg_multiplier_out, Mux(prev_alu_func ===  ALU.FN_VFMADD, Reg_MulAdd_out, Mux(prev_alu_func ===  ALU.FN_VFMIN, Reg_min_out,Mux(prev_alu_func === ALU.FN_VBCASTX, Reg_vbcastx_out, Reg_max_out)))))))
 
   io.resp.bits <> req
   io.resp.bits.data := v_alu_out
@@ -279,6 +279,15 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
  //printf("[checkcachecounter]invpu2 SZ_ALU_FN.getWidth %d  el#<=8  %b  in1 %x in2 %x in3 %x [v_alu_out %x muladd %x add %x] [req.fn %x fn_vadd %x fn_vmul %x fn_vfmadd %x] \n", SZ_ALU_FN.getWidth, number_of_elements <= n, io.req.bits.in1, io.req.bits.in2, io.req.bits.in3, v_alu_out,Reg_MulAdd_out, Reg_adder_out,io.req.bits.fn, ALU.FN_VADD, ALU.FN_VMUL, ALU.FN_VFMADD)
 
   //////////////////////////////////////////////////////debug statements////////////////////////////////////////////////////////////////////////////////////////////////////
+when (io.resp.valid) {
+  printf ("[Valid Vector Unit Response]: Function %x %x Result %x (Reg_adder_out %x) (Reg_redsum_out %x) (number of elements %x) (n %x)\n", io.req.bits.fn, prev_alu_func, v_alu_out, Reg_adder_out, Reg_redsum_out, io.req.bits.number_of_elements, n)
+}
+when (io.req.valid) {
+  printf ("[Valid Vector Unit Request]: Function %x Input Data %x %x %x\n", io.req.bits.fn, io.req.bits.in1, io.req.bits.in2, io.req.bits.in3)
+}
+
+
+
 /*when (io.req.bits.vector){
   printf("[checkcachecounter]%b@@@VPU in1 %x in2 %x \n", number_of_elements <= n, io.req.bits.in1, io.req.bits.in2)
   printf("[checkcachecounter]@@@VPU io.a %x %x %x %x %x io.b %x %x %x %x %x  \n", (io.req.bits.in1 >> (counter_num*UInt(128)))(63,48),(io.req.bits.in1 >> (counter_num*UInt(128)))(79,64), (io.req.bits.in1 >> (counter_num*UInt(128)))(95,80), (io.req.bits.in1 >> (counter_num*UInt(128)))(111,96), (io.req.bits.in1 >> (counter_num*UInt(128)))(127,112), (io.req.bits.in2 >> (counter_num*UInt(128)))(63,48), (io.req.bits.in2 >> (counter_num*UInt(128)))(79,64), (io.req.bits.in2 >> (counter_num*UInt(128)))(95,80), (io.req.bits.in2 >> (counter_num*UInt(128)))(111,96), (io.req.bits.in2 >> (counter_num*UInt(128)))(127,112))
