@@ -149,6 +149,7 @@ class FrontendModule(outer: Frontend) extends LazyModuleImp(outer)
   fq.io.enq.bits.btb := s2_btb_resp_bits
   fq.io.enq.bits.btb.taken := s2_btb_taken
   fq.io.enq.bits.xcpt := s2_tlb_resp
+
   when (icache.io.resp.valid && icache.io.resp.bits.ae) { fq.io.enq.bits.xcpt.ae.inst := true }
 
   if (usingBTB) {
@@ -300,6 +301,11 @@ class FrontendModule(outer: Frontend) extends LazyModuleImp(outer)
   io.cpu.perf.tlbMiss := io.ptw.req.fire()
   io.errors := icache.io.errors
 
+
+  printf("[checkcachecounter]FRRRRRRrONTEND io.cpu.npc %x [io.cpu.req.valid %b, io.cpu.req.bits.pc %x , npc %x] s1_pc %x s2_pc %x tlb.io.req.valid %b tlb.io.req.bits.vaddr %x tlb.io.req.bits.fence [rs1 %b rs2 %b addr %x asid %x]  ||| icache.io.resp.bits.data %x icache.io.resp.valid %b  ||| tlb.io.resp.miss %b  ||| s2_tlb_resp = Reg(tlb.io.resp) s2_xcpt %b = s2_tlb_resp.ae.inst %b || s2_tlb_resp.pf.inst %b |||| tlb.io.resp.paddr %x tlb.io.resp.pf.inst %b tlb.io.resp.ae.inst %b |||| icache.io.req.valid %b := s0_valid %b  icache.io.req.bits.addr %x := io.cpu.npc %x\n", io.cpu.npc, io.cpu.req.valid, io.cpu.req.bits.pc, npc, s1_pc, s2_pc, tlb.io.req.valid, tlb.io.req.bits.vaddr, tlb.io.req.bits.sfence.bits.rs1, tlb.io.req.bits.sfence.bits.rs2, tlb.io.req.bits.sfence.bits.addr, tlb.io.req.bits.sfence.bits.asid, icache.io.resp.bits.data, icache.io.resp.valid, tlb.io.resp.miss, s2_xcpt, s2_tlb_resp.ae.inst, s2_tlb_resp.pf.inst, tlb.io.resp.paddr, tlb.io.resp.pf.inst, tlb.io.resp.ae.inst, icache.io.req.valid, s0_valid, icache.io.req.bits.addr, io.cpu.npc)
+
+  printf("[checkcachecounter] FRRRRRRrontend  fq.io.enq.bits.xcpt.ae %b .pf %b := s2_tlb_resp fq.io.enq.bits.pc %x := s2_pc %x   fq.io.enq.valid %b := RegNext(s1_valid %b) && s2_valid %b && (icache.io.resp.valid %b || !s2_tlb_resp.miss %b && icache.io.s2_kill %b)\n", fq.io.enq.bits.xcpt.ae.inst, fq.io.enq.bits.xcpt.pf.inst, fq.io.enq.bits.pc, s2_pc, fq.io.enq.valid, s1_valid, s2_valid, icache.io.resp.valid, !s2_tlb_resp.miss, icache.io.s2_kill)
+ 
   def alignPC(pc: UInt) = ~(~pc | (coreInstBytes - 1))
 
   def ccover(cond: Bool, label: String, desc: String)(implicit sourceInfo: SourceInfo) =

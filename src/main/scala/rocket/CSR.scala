@@ -97,7 +97,7 @@ class PTBR(implicit p: Parameters) extends CoreBundle()(p) {
 
   val mode = UInt(width = modeBits)
   val asid = UInt(width = maxASIdBits)
-  val ppn = UInt(width = maxPAddrBits - pgIdxBits)
+  val ppn  = UInt(width = maxPAddrBits - pgIdxBits)
 }
 
 object PRV
@@ -197,6 +197,9 @@ class CSRFileIO(implicit p: Parameters) extends CoreBundle
   val cause = UInt(INPUT, xLen)
   val pc = UInt(INPUT, vaddrBitsExtended)
   val tval = UInt(INPUT, vaddrBitsExtended)
+  val vl  = UInt(OUTPUT, xLen)
+  val sscratch = UInt(OUTPUT, xLen)
+  val vcfg  = UInt(OUTPUT, xLen)
   val time = UInt(OUTPUT, xLen)
   val fcsr_rm = Bits(OUTPUT, FPConstants.RM_SZ)
   val fcsr_flags = Valid(Bits(width = FPConstants.FLAGS_SZ)).flip
@@ -253,6 +256,7 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
     del.mtip := false
     del.meip := false
 
+    printf("[checkcachecounter]INTERRRRRRUPT  supported_high_interrupts %x io.interrupts.buserror.nonEmpty %b sup.asUInt %x | supported_high_interrupts %x %x del.asUInt %x\n", supported_high_interrupts, io.interrupts.buserror.nonEmpty, sup.asUInt, supported_high_interrupts, sup.asUInt | supported_high_interrupts, del.asUInt)
     (sup.asUInt | supported_high_interrupts, del.asUInt)
   }
   val delegable_exceptions = UInt(Seq(
@@ -300,6 +304,10 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
   val reg_fflags = Reg(UInt(width = 5))
   val reg_frm = Reg(UInt(width = 3))
 
+  //zazad begins
+  val reg_vl = Reg(UInt(width = 5))
+  val reg_vcfg = Reg(UInt(width = xLen))
+  //zazad ends
   val reg_instret = WideCounter(64, io.retire)
   val reg_cycle = if (enableCommitLog) reg_instret else WideCounter(64)
   val reg_hpmevent = io.counters.map(c => Reg(init = UInt(0, xLen)))
@@ -325,7 +333,9 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
   val (anyInterrupt, whichInterrupt) = chooseInterrupt(Seq(s_interrupts, m_interrupts, d_interrupts))
   val interruptMSB = BigInt(1) << (xLen-1)
   val interruptCause = UInt(interruptMSB) + whichInterrupt
+
   io.interrupt := anyInterrupt && !reg_debug && !io.singleStep || reg_singleStepped
+
   io.interrupt_cause := interruptCause
   io.bp := reg_bp take nBreakpoints
   io.pmp := reg_pmp.map(PMP(_))
@@ -360,7 +370,9 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
     CSRs.mepc -> readEPC(reg_mepc).sextTo(xLen),
     CSRs.mbadaddr -> reg_mbadaddr.sextTo(xLen),
     CSRs.mcause -> reg_mcause,
-    CSRs.mhartid -> io.hartid)
+    CSRs.mhartid -> io.hartid,
+    CSRs.vl -> reg_vl,
+    CSRs.vcfg -> reg_vcfg)
 
   val debug_csrs = LinkedHashMap[Int,Bits](
     CSRs.dcsr -> reg_dcsr.asUInt,
@@ -423,7 +435,7 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
     read_sstatus.spp := io.status.spp
     read_sstatus.spie := io.status.spie
     read_sstatus.sie := io.status.sie
-
+//    printf("[checkcachecounter]CSSSsssssssrrrrrr usingVM read_sstatus [sd %b %b %b %b %b %b fs %b spp %b spie %b sie %b] (read_sstatus.asUInt())(xLen-1,0) %x read_sip.asUInt %b read_sie.asUInt %b reg_sscratch  %x reg_scause %b reg_sptbr.asUInt %x   \n", io.status.sd, io.status.uxl, io.status.sd_rv32, io.status.mxr, io.status.sum, io.status.xs, io.status.fs, io.status.spp,  io.status.spie, io.status.sie, (read_sstatus.asUInt())(xLen-1,0), read_sip.asUInt, read_sie.asUInt, reg_sscratch, reg_scause, reg_sptbr.asUInt)
     read_mapping += CSRs.sstatus -> (read_sstatus.asUInt())(xLen-1,0)
     read_mapping += CSRs.sip -> read_sip.asUInt
     read_mapping += CSRs.sie -> read_sie.asUInt
@@ -451,6 +463,8 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
 
   val decoded_addr = read_mapping map { case (k, v) => k -> (io.rw.addr === k) }
   val wdata = readModifyWriteCSR(io.rw.cmd, io.rw.rdata, io.rw.wdata)
+// instruction exception  printf("[checkcachecounter]CSSSsssssssrrrrrr reg_mstatus.spp %b spie %b sie %b wdata %x io.rw.cmd [c %b s %b w %b] io.rdata %x io.wdata %x \n", reg_mstatus.spp, reg_mstatus.spie, reg_mstatus.sie, wdata, io.rw.cmd === CSR.C, io.rw.cmd === CSR.S, io.rw.cmd === CSR.W, io.rw.rdata,io.rw.wdata)
+  //printf("[checkcachecounter]****** reg_wfi %b csrstall %b CSRs io.rw.adr %d  wdata %x io.rw[wdata %x rdata %x cmd %d] reg_vl %d io.vl %d decoded_addr(CSRs.vl) %b csr.vl %d \n",reg_wfi, io.csr_stall, io.rw.addr, wdata, io.rw.wdata,io.rw.rdata, io.rw.cmd,reg_vl, io.vl, decoded_addr(CSRs.vl), CSRs.vl)
 
   val system_insn = io.rw.cmd === CSR.I
   val opcode = UInt(1) << io.rw.addr(2,0)
@@ -515,6 +529,7 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
     io.status.sd_rv32 := io.status.sd
 
   val exception = insn_call || insn_break || io.exception
+//  printf("[checkcachecounter] CSSSSSSSSSSRRRRRR  exception %b = insn_call %b || insn_break %b || io.exception %b   reg_sptbr io.ptbr.ppn %x reg_sptbr.ppn %x     insn_ret %b  io.retire %b io.interrupt %b := anyInterrupt %b io.interrupt_cause %x := interruptCause %x  && !reg_debug %b && !io.singleStep %b || reg_singleStepped %b  cause %b [%b %x %x %b %x %x] \n", exception, insn_call, insn_break, io.exception, io.ptbr.ppn,reg_sptbr.ppn, insn_ret, io.retire, io.interrupt, anyInterrupt, io.interrupt_cause, interruptCause, !reg_debug, !io.singleStep, reg_singleStepped, cause, insn_call, reg_mstatus.prv, Causes.user_ecall, insn_break, Causes.breakpoint, io.cause)
   assert(PopCount(insn_ret :: insn_call :: insn_break :: io.exception :: Nil) <= 1, "these conditions must be mutually exclusive")
 
   when (insn_wfi && !io.singleStep && !reg_debug) { reg_wfi := true }
@@ -538,9 +553,11 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
         reg_dcsr.cause := Mux(reg_singleStepped, 4, Mux(causeIsDebugInt, 3, Mux[UInt](causeIsDebugTrigger, 2, 1)))
         reg_dcsr.prv := trimPrivilege(reg_mstatus.prv)
         new_prv := PRV.M
+//        printf("[checkcachecounter] third CSSSSSSSSSSRRRRRR  epc %x reg_dpc %x cause %x\n", epc, reg_dpc, cause)
       }
     }.elsewhen (delegate) {
       reg_sepc := epc
+   //   printf("[checkcachecounter] second CSSSSSSSSSSRRRRRR  epc %x reg_sepc %x cause %x tval %x sCause %x reg_mstatus.sie %x reg_mstatus.prv %x\n", epc, reg_sepc, cause, io.tval, sCause, reg_mstatus.sie, reg_mstatus.prv)
       reg_scause := cause
       xcause_dest := sCause
       reg_sbadaddr := io.tval
@@ -550,6 +567,7 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
       new_prv := PRV.S
     }.otherwise {
       reg_mepc := epc
+//      printf("[checkcachecounter] third CSSSSSSSSSSRRRRRR  epc %x reg_mepc %x cause %x io.tval %b \n", epc, reg_mepc, cause, io.tval)
       reg_mcause := cause
       xcause_dest := mCause
       reg_mbadaddr := io.tval
@@ -579,28 +597,35 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
   }
 
   when (insn_ret) {
+//    printf("[checkcachecounter] inst_ret %b \n", insn_ret)
     when (Bool(usingVM) && !io.rw.addr(9)) {
       reg_mstatus.sie := reg_mstatus.spie
       reg_mstatus.spie := true
       reg_mstatus.spp := PRV.U
       new_prv := reg_mstatus.spp
       io.evec := readEPC(reg_sepc)
+//      printf("[checkcachecounter] first  CSSSSSSSSSSRRRRRR  io.evex  %x  read_epc %x  \n", io.evec, readEPC(reg_sepc))
     }.elsewhen (Bool(usingDebug) && io.rw.addr(10)) {
       new_prv := reg_dcsr.prv
       reg_debug := false
       io.evec := readEPC(reg_dpc)
+    //  printf("[checkcachecounter] second  CSSSSSSSSSSRRRRRR  io.evex  %x  read_epc  %x  \n", io.evec, readEPC(reg_dpc))
     }.otherwise {
       reg_mstatus.mie := reg_mstatus.mpie
       reg_mstatus.mpie := true
       reg_mstatus.mpp := legalizePrivilege(PRV.U)
       new_prv := reg_mstatus.mpp
       io.evec := readEPC(reg_mepc)
+      //printf("[checkcachecounter] third  CSSSSSSSSSSRRRRRR  io.evex  %x  read_epc %x \n", io.evec, readEPC(reg_mepc))
     }
   }
 
   io.time := reg_cycle
   io.csr_stall := reg_wfi
-
+  //zazad begins
+  io.vl := reg_vl;
+  io.sscratch := reg_sscratch;
+  //zazad ends
   io.rw.rdata := Mux1H(for ((k, v) <- read_mapping) yield decoded_addr(k) -> v)
 
   // cover access to register
@@ -631,6 +656,7 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
           reg_mstatus.tw := new_mstatus.tw
           reg_mstatus.tvm := new_mstatus.tvm
           reg_mstatus.tsr := new_mstatus.tsr
+//          printf("[checkcachecounter]CSSssssssssrrrrrr io.rw.cmd.isOneOf usingUser usingVM [%b %b %b %b %b %b %b %b]  wdata %x \n", new_mstatus.mxr, new_mstatus.sum, new_mstatus.spp, new_mstatus.spie, new_mstatus.sie, new_mstatus.tw, new_mstatus.tvm, new_mstatus.tsr, wdata)
         }
       }
 
@@ -658,6 +684,12 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
         reg_mip.seip := new_mip.seip
       }
     }
+    //zazad begins
+    when (decoded_addr(CSRs.vl))        { reg_vl := wdata
+      //printf("[checkcachecounter]********CSRs insdie write reg_val %x wdata %x \n", reg_vl, wdata)
+    }
+    when (decoded_addr(CSRs.vcfg))        { reg_vcfg := wdata}
+    //zazad ends
     when (decoded_addr(CSRs.mie))      { reg_mie := wdata & supported_interrupts }
     when (decoded_addr(CSRs.mepc))     { reg_mepc := formEPC(wdata) }
     when (decoded_addr(CSRs.mscratch)) { reg_mscratch := wdata }
@@ -702,6 +734,7 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
         reg_mstatus.sum := new_sstatus.sum
         reg_mstatus.fs := Fill(2, new_sstatus.fs.orR) // even without an FPU
         if (usingRoCC) reg_mstatus.xs := Fill(2, new_sstatus.xs.orR)
+//        printf("[checkcachecounter]CSSSsssssssrrrrrr usingVM and decoded_addr(CSRs.sstatus) %b %b %b %b %b wdat %x \n", new_sstatus.sie, new_sstatus.spie, new_sstatus.spp, new_sstatus.mxr, new_sstatus.mxr, wdata)
       }
       when (decoded_addr(CSRs.sip)) {
         val new_sip = new MIP().fromBits(wdata)
@@ -714,6 +747,7 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
         when (new_sptbr.mode === valid_mode) { reg_sptbr.mode := valid_mode }
         when (new_sptbr.mode === 0 || new_sptbr.mode === valid_mode) {
           reg_sptbr.ppn := new_sptbr.ppn(ppnBits-1,0)
+  //        printf("[checkcachecounter]CSSSSSSssssrrrrrr new_sptbr new_sptbr.ppn %x valid_mode %x wdata %x \n", new_sptbr.ppn(ppnBits-1,0), valid_mode, wdata)
           if (asIdBits > 0) reg_sptbr.asid := new_sptbr.asid(asIdBits-1,0)
         }
       }
@@ -807,6 +841,10 @@ class CSRFile(perfEventSets: EventSets = new EventSets(Seq()))(implicit p: Param
     t.interrupt := cause(xLen-1)
     t.tval := io.tval
   }
+
+
+printf("[checkcachecounter]INTERRRRRRUPT io.interrupt %b := anyInterrupt %b && !reg_debug %b && !io.singleStep %b || reg_singleStepped %b  |||||||||<=  io.retire(0) %b || exception %b  io.singleStep %b |||||  s_interrupts %b m_interrupts %b d_interrupts %b interruptCause %x |||| exception = insn_call %b || insn_break %b || io.exception %b  |||||||read_mip %x = mip.asUInt %x & supported_interrupts %x  |||||| high_interrupts %x CSR.busErrorIntCause %x   |||||||||pending_interrupts %x = high_interrupts %x | (read_mip %x & reg_mie %x)\n", io.interrupt, anyInterrupt, !reg_debug, !io.singleStep, reg_singleStepped, io.retire(0), exception, io.singleStep, s_interrupts, s_interrupts, m_interrupts, d_interrupts, insn_call, insn_break, io.exception, read_mip ,mip.asUInt, supported_interrupts , high_interrupts, CSR.busErrorIntCause,pending_interrupts, high_interrupts,read_mip,reg_mie)
+
 
   def chooseInterrupt(masksIn: Seq[UInt]): (Bool, UInt) = {
     val nonstandard = supported_interrupts.getWidth-1 to 12 by -1

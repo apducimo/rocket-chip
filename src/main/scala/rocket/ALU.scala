@@ -36,6 +36,18 @@ object ALU
   def FN_MULHSU = FN_SEQ
   def FN_MULHU  = FN_SNE
 
+  //zazad
+  val SZ_ALU_VFN = 4
+  def FN_VX       = BitPat("b????")
+  def FN_VADD     = UInt(0)
+  def FN_VMUL     = UInt(1)
+  def FN_VFMADD   = UInt(2)
+  def FN_VFMAX    = UInt(3)
+  def FN_VFMIN    = UInt(4)
+  def FN_VFREDSUM = UInt(5)
+  def FN_VBCASTX  = UInt(6)
+  def FN_VSPLAT   = UInt(7)
+
   def isMulFN(fn: UInt, cmp: UInt) = fn(1,0) === cmp(1,0)
   def isSub(cmd: UInt) = cmd(3)
   def isCmp(cmd: UInt) = cmd >= FN_SLT

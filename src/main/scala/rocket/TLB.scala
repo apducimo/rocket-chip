@@ -123,6 +123,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
 
   val vpn = io.req.bits.vaddr(vaddrBits-1, pgIdxBits)
   val lookup_tag = Cat(io.ptw.ptbr.asid, vpn)
+// printf("[checkcachecounter]TLLLlllllllllb lookup_tag %x  vpn %x  \n", lookup_tag, vpn)
   val hitsVec = (0 until totalEntries).map { i => if (!usingVM) false.B else vm_enabled && {
     var tagMatch = valid(i)
     for (j <- 0 until pgLevels) {
@@ -165,6 +166,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
 
     valid := valid | UIntToOH(waddr)
     reg_entries(waddr) := newEntry.asUInt
+//    printf("[checkcachecounter]TLLLLLLLLLLllb in tlb refill new_entry newEntry.ppn %x newEntry.tag %x newEntry.sw %b newEntry.eff %b newEntry.sr %b newEntry.sx %b \n", newEntry.ppn, newEntry.tag, newEntry.sw, newEntry.eff, newEntry.sr, newEntry.sx )
   }
 
   val plru = new PseudoLRU(normalEntries)
@@ -186,6 +188,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
   val prefetchable_array = Cat(cacheable && homogeneous, false.B, entries.init.map(_.c).asUInt)
 
   val misaligned = (io.req.bits.vaddr & (UIntToOH(io.req.bits.size) - 1)).orR
+  //printf("[checksizes] vaddr %x  rest %x misaligned %b \n",io.req.bits.vaddr, (UIntToOH(io.req.bits.size) - 1), misaligned )
   val bad_va = vm_enabled &&
     (if (vpnBits == vpnBitsExtended) Bool(false)
      else (io.req.bits.vaddr.asSInt < 0.S) =/= (vpn.asSInt < 0.S))
@@ -221,6 +224,8 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
   io.req.ready := state === s_ready
   io.resp.pf.ld := (bad_va && isRead(io.req.bits.cmd)) || (pf_ld_array & hits).orR
   io.resp.pf.st := (bad_va && isWrite(io.req.bits.cmd)) || (pf_st_array & hits).orR
+//  printf("[checkcachecounter]TLLLLllllllllb tlb io.resp.pf.st %b bad_va %b isWrite(io.req.bits.cmd) %b pf_st_array %x [ w_array %x | ptw_ae_array %x] hits %x w_array [priv_rw_ok %x & entries.map(_.sw).asUInt %x ]  tlb_hit %b tlb_miss %b = vm_enabled %b && !bad_va %b && !tlb_hit %b && !io.req.bits.sfence.valid %b   io.resp.paddr %x  [ppn %x io.req.bits.vaddr %x] io.resp.miss %b := do_refill %b || tlb_miss %b || multipleHits %b |||| pf_inst_array %x io.resp.pf.inst %x |||| io.resp.pf.inst %b bad_va %b pf_inst_array %x hits %x x_array %x  ptw_ae_array %x  priv_x_ok %x  entries.map(_.sx).asUInt %x  priv_s %x entries.map(_.u).asUInt %x |||| priv %b = if (instruction %b ) io.ptw.status.prv %b else io.ptw.status.dprv %b\n", io.resp.pf.st, bad_va, isWrite(io.req.bits.cmd), pf_st_array, w_array, ptw_ae_array, hits, priv_rw_ok, entries.map(_.sw).asUInt, tlb_hit, tlb_miss, vm_enabled, !bad_va, !tlb_hit, !io.req.bits.sfence.valid, io.resp.paddr, ppn, io.req.bits.vaddr, io.resp.miss, do_refill, tlb_miss, multipleHits, pf_inst_array, io.resp.pf.inst, io.resp.pf.inst, bad_va, pf_inst_array, hits, x_array, ptw_ae_array, priv_x_ok, entries.map(_.sx).asUInt, priv_s,entries.map(_.u).asUInt, priv, instruction, io.ptw.status.prv, io.ptw.status.dprv)
+
   io.resp.pf.inst := bad_va || (pf_inst_array & hits).orR
   io.resp.ae.ld := (ae_ld_array & hits).orR
   io.resp.ae.st := (ae_st_array & hits).orR
@@ -234,7 +239,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
   io.resp.paddr := Cat(ppn, io.req.bits.vaddr(pgIdxBits-1, 0))
 
   io.ptw.req.valid := state === s_request
-  io.ptw.req.bits <> io.ptw.status
+  io.ptw.req.bits <> io.ptw.status // io.ptw.status := csr.io.status in the rocket core file
   io.ptw.req.bits.addr := r_refill_tag
 
   if (usingVM) {
@@ -244,6 +249,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
       r_refill_tag := lookup_tag
       r_refill_waddr := repl_waddr
       r_req := io.req.bits
+//      printf("[checkcachecounter]TLLLLllllllllb in tlb req valid and tlb_miss  io.req.bits.vaddr %x part of vaddr lookup_tag %x \n",  io.req.bits.vaddr, lookup_tag)
     }
     when (state === s_request) {
       when (sfence) { state := s_ready }
