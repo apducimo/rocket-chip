@@ -104,7 +104,7 @@ class SimDTM(implicit p: Parameters) extends BlackBox {
 
     tbsuccess := io.exit === UInt(1)
     when (io.exit >= UInt(2)) {
-      printf("*** FAILED *** (exit code = %d)\n", io.exit >> UInt(1))
+      //printf("*** FAILED *** (exit code = %d)\n", io.exit >> UInt(1))
       stop(1)
     }
   }
@@ -133,7 +133,7 @@ class SimJTAG(tickDelay: Int = 50) extends BlackBox(Map("TICK_DELAY" -> IntParam
     // which is controlling this simulation.
     tbsuccess := io.exit === UInt(1)
     when (io.exit >= UInt(2)) {
-      printf("*** FAILED *** (exit code = %d)\n", io.exit >> UInt(1))
+      //printf("*** FAILED *** (exit code = %d)\n", io.exit >> UInt(1))
       stop(1)
     }
   }

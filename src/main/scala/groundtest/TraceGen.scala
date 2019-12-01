@@ -379,14 +379,14 @@ class TraceGenerator(val params: TraceGenParams)(implicit val p: Parameters) ext
     when (currentOp === opFence) {
       when (opInProgress === UInt(0) && !reqValid) {
         // Emit fence request
-        printf("%d: fence-req @%d\n", tid, cycleCount)
+        //printf("%d: fence-req @%d\n", tid, cycleCount)
         // Multi-cycle operation now in progress
         opInProgress := UInt(1)
       }
       // Wait until all requests have had a response
       .elsewhen (reqCount === respCount) {
         // Emit fence response
-        printf("%d: fence-resp @%d\n", tid, cycleCount)
+        //printf("%d: fence-resp @%d\n", tid, cycleCount)
         // Move on to a new operation
         currentOp := randOp
         // Operation finished
@@ -518,27 +518,27 @@ class TraceGenerator(val params: TraceGenParams)(implicit val p: Parameters) ext
     // Short-hand for address
     val addr = io.mem.req.bits.addr
     // Print thread id
-    printf("%d:", tid)
+    //printf("%d:", tid)
     // Print command
     when (reqCmd === M_XRD) {
-      printf(" load-req 0x%x", addr)
+      //printf(" load-req 0x%x", addr)
     }
     when (reqCmd === M_XLR) {
-      printf(" load-reserve-req 0x%x", addr)
+      //printf(" load-reserve-req 0x%x", addr)
     }
     when (reqCmd === M_XWR) {
-      printf(" store-req %d 0x%x", reqData, addr)
+      //printf(" store-req %d 0x%x", reqData, addr)
     }
     when (reqCmd === M_XSC) {
-      printf(" store-cond-req %d 0x%x", reqData, addr)
+      //printf(" store-cond-req %d 0x%x", reqData, addr)
     }
     when (reqCmd === M_XA_SWAP) {
-      printf(" swap-req %d 0x%x", reqData, addr)
+      //printf(" swap-req %d 0x%x", reqData, addr)
     }
     // Print tag
-    printf(" #%d", reqTag)
+    //printf(" #%d", reqTag)
     // Print time
-    printf(" @%d\n", cycleCount)
+    //printf(" @%d\n", cycleCount)
   }
 
   // Handling of responses
@@ -550,8 +550,8 @@ class TraceGenerator(val params: TraceGenParams)(implicit val p: Parameters) ext
     tagMan.io.tagIn := io.mem.resp.bits.tag
     tagMan.io.put   := Bool(true)
     // Print response
-    printf("%d: resp %d #%d @%d\n", tid,
-      io.mem.resp.bits.data, io.mem.resp.bits.tag, cycleCount)
+    //printf("%d: resp %d #%d @%d\n", tid,
+    //  io.mem.resp.bits.data, io.mem.resp.bits.tag, cycleCount)
     // Increment response count
     respCount := respCount + UInt(1)
   }
@@ -566,7 +566,7 @@ class TraceGenerator(val params: TraceGenParams)(implicit val p: Parameters) ext
 
   // Emit that this thread has completed
   when (donePulse) {
-    printf(s"FINISHED ${numGens}\n")
+    //printf(s"FINISHED ${numGens}\n")
   }
 
   io.finished := done

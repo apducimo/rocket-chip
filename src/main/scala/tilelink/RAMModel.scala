@@ -135,19 +135,19 @@ class TLRAMModel(log: String = "", ignoreErrorData: Boolean = false)(implicit p:
           for (i <- 0 until beatBytes) {
             val busy = a_inc(i) - a_dec(i) - (!a_first).asUInt
             val byte = a.data(8*(i+1)-1, 8*i)
-            when (a.mask(i)) {
-              printf(log + " ")
-              when (a.opcode === TLMessages.PutFullData) { printf("PF") }
-              when (a.opcode === TLMessages.PutPartialData) { printf("PP") }
-              when (a.opcode === TLMessages.ArithmeticData) { printf("A ") }
-              when (a.opcode === TLMessages.LogicalData) { printf("L ") }
-              printf(" 0x%x := 0x%x #%d %x\n", a_addr_hi << shift | UInt(i), byte, busy, a.param)
-            }
+            //when (a.mask(i)) {
+              //printf(log + " ")
+              //when (a.opcode === TLMessages.PutFullData) { //printf("PF") }
+              //when (a.opcode === TLMessages.PutPartialData) { //printf("PP") }
+              //when (a.opcode === TLMessages.ArithmeticData) { //printf("A ") }
+              //when (a.opcode === TLMessages.LogicalData) { //printf("L ") }
+              //printf(" 0x%x := 0x%x #%d %x\n", a_addr_hi << shift | UInt(i), byte, busy, a.param)
+            //}
           }
         }
 
         when (a.opcode === TLMessages.Get) {
-          printf(log + " G  0x%x - 0x%x\n", a_base, a_base | UIntToOH1(a_size, addressBits))
+          //printf(log + " G  0x%x - 0x%x\n", a_base, a_base | UIntToOH1(a_size, addressBits))
         }
       }
 
@@ -264,10 +264,10 @@ class TLRAMModel(log: String = "", ignoreErrorData: Boolean = false)(implicit p:
 
         when (d_flight.opcode === TLMessages.PutFullData || d_flight.opcode === TLMessages.PutPartialData) {
           assert (d.opcode === TLMessages.AccessAck)
-          printf(log + " ")
-          when (d_flight.opcode === TLMessages.PutFullData) { printf("pf") }
-          when (d_flight.opcode === TLMessages.PutPartialData) { printf("pp") }
-          printf(" 0x%x - 0x%x\n", d_base, d_base | UIntToOH1(d_size, addressBits))
+          //printf(log + " ")
+          //when (d_flight.opcode === TLMessages.PutFullData) { //printf("pf") }
+          //when (d_flight.opcode === TLMessages.PutPartialData) { //printf("pp") }
+          //printf(" 0x%x - 0x%x\n", d_base, d_base | UIntToOH1(d_size, addressBits))
         }
 
         when (d_flight.opcode === TLMessages.Get || d_flight.opcode === TLMessages.ArithmeticData || d_flight.opcode === TLMessages.LogicalData) {
@@ -277,22 +277,22 @@ class TLRAMModel(log: String = "", ignoreErrorData: Boolean = false)(implicit p:
             val shadow = Wire(init = d_shadow(i))
             when (d_mask(i)) {
               val d_addr = d_addr_hi << shift | UInt(i)
-              printf(log + " ")
-              when (d_flight.opcode === TLMessages.Get) { printf("g ") }
-              when (d_flight.opcode === TLMessages.ArithmeticData) { printf("a ") }
-              when (d_flight.opcode === TLMessages.LogicalData) { printf("l ") }
-              printf(" 0x%x := 0x%x", d_addr, got)
+              //printf(log + " ")
+              //when (d_flight.opcode === TLMessages.Get) { //printf("g ") }
+              //when (d_flight.opcode === TLMessages.ArithmeticData) { //printf("a ") }
+              //when (d_flight.opcode === TLMessages.LogicalData) { //printf("l ") }
+              //printf(" 0x%x := 0x%x", d_addr, got)
               when (!shadow.valid) {
-                printf(", undefined (uninitialized or prior overlapping puts)\n")
+                //printf(", undefined (uninitialized or prior overlapping puts)\n")
               } .elsewhen (d_inc(i) =/= d_dec(i)) {
-                printf(", undefined (concurrent incomplete puts #%d)\n", d_inc(i) - d_dec(i))
+                //printf(", undefined (concurrent incomplete puts #%d)\n", d_inc(i) - d_dec(i))
               } .elsewhen (!d_fifo && !d_valid) {
-                printf(", undefined (concurrent completed put)\n")
+                //printf(", undefined (concurrent completed put)\n")
               } .elsewhen (Bool(ignoreErrorData) && d.error) {
-                printf(", undefined (error result)\n")
+                //printf(", undefined (error result)\n")
               } .otherwise {
-                printf("\n")
-                when (shadow.value =/= got) { printf("EXPECTED: 0x%x\n", shadow.value) }
+                //printf("\n")
+                //when (shadow.value =/= got) { //printf("EXPECTED: 0x%x\n", shadow.value) }
                 assert (shadow.value === got)
               }
             }
@@ -306,8 +306,8 @@ class TLRAMModel(log: String = "", ignoreErrorData: Boolean = false)(implicit p:
           when (d_last) {
             val must_match = d_crc_valid && (d_fifo || (d_valid && d_no_race))
             val error = Bool(ignoreErrorData) && d.error
-            printf(log + " crc = 0x%x %d\n", d_crc, must_match.asUInt)
-            when (!error && must_match && d_crc =/= d_crc_check) { printf("EXPECTED: 0x%x\n", d_crc_check) }
+            //printf(log + " crc = 0x%x %d\n", d_crc, must_match.asUInt)
+            //when (!error && must_match && d_crc =/= d_crc_check) { //printf("EXPECTED: 0x%x\n", d_crc_check) }
             assert (!must_match || d_crc === d_crc_check)
           }
         }

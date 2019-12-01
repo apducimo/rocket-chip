@@ -187,7 +187,7 @@ class ValExec_MulAddRecFN_mul(expWidth: Int, sigWidth: Int) extends Module
         equivRecFN(expWidth, sigWidth, io.actual.out, io.expected.recOut) &&
   (io.actual.exceptionFlags === io.expected.exceptionFlags)
 
-//  printf("[checkcachecounter] pass %b result %x actual %x\n", io.pass, io.result, io.actual.out)
+//  //printf("[checkcachecounter] pass %b result %x actual %x\n", io.pass, io.result, io.actual.out)
 }
 
 class ValExec_MulAddRecF16_mul extends ValExec_MulAddRecFN_mul(5, 11)

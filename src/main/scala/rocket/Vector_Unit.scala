@@ -43,7 +43,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   // val s_ready :: s_neg_inputs :: s_mul :: s_div :: s_dummy :: s_neg_output :: s_done_mul :: s_done_div :: Nil = Enum(UInt(), 8)
   //val state = Reg(init=s_ready)
 
-//  printf("[checkcachecounter]VVVVVVVVEEEEEEEEECCCCCCCCCCTTTTTTTTOOOOOOOORRRRRRRR io.cpu.req.bits.number_of_elements %x \n", io.req.bits.number_of_elements)
+//  //printf("[checkcachecounter]VVVVVVVVEEEEEEEEECCCCCCCCCCTTTTTTTTOOOOOOOORRRRRRRR io.cpu.req.bits.number_of_elements %x \n", io.req.bits.number_of_elements)
   val reduction_sum = (io.req.bits.fn === ALU.FN_VFREDSUM)
   val counter_num = Reg(init = UInt(0,1))
   val req = Reg(io.req.bits)
@@ -58,12 +58,12 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
       start_count := Bool(true)
       io.resp.valid := Bool(false)
       req_ready := Bool(false)
-//      printf("[checkcachecounter]@@@VPU in1 \n")
+//      //printf("[checkcachecounter]@@@VPU in1 \n")
     } .otherwise {
       start_count := Bool(false)
       io.resp.valid := Bool(true)
       req_ready := Bool(true)
-  //    printf("[checkcachecounter]@@@VPU in2 \n")
+  //    //printf("[checkcachecounter]@@@VPU in2 \n")
     }
 
   }.otherwise{
@@ -71,7 +71,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
     start_count := Bool(false)
     io.resp.valid := Bool(true)
     req_ready := Bool(true)
-//    printf("[checkcachecounter]@@@VPU in3 \n")
+//    //printf("[checkcachecounter]@@@VPU in3 \n")
   }
 
   when (start_count){
@@ -84,8 +84,10 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   val Adders = Vec(Seq.fill(8){Module( new ValExec_MulAddRecF16_add()).io })//fill(8)
   val adder_out = Wire(Vec(8, UInt(16.W)))
   val adder_out_cat = Wire(UInt(128.W))
+  val reg_sixth = Reg(UInt(16.W))
+  reg_sixth := adder_out(6)
 
-  // wire up the ports of the adders
+// wire up the ports of the adders
  when (!reduction_sum){
   for(i <- 0 until n) {
      Adders(i).a := (((io.req.bits.in1 >> counter_num * UInt(128))(127,0)) >> 16*i)(15,0)
@@ -112,21 +114,23 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
      Adders(6).b := adder_out(5)
      adder_out(6) := Adders(6).result
 
+     Adders(7).a  := adder_out(6)
+     Adders(7).b  := reg_sixth
+     adder_out(7) := Adders(7).result
+
+
  }
 
    adder_out_cat := Cat(adder_out(7),adder_out(6),adder_out(5),adder_out(4),adder_out(3),adder_out(2),adder_out(1),adder_out(0))
    val Reg_adder_out = Reg(UInt(256.W))
   Reg_adder_out := Mux(counter_num === UInt(0), adder_out_cat, Cat(adder_out_cat, Reg_adder_out(127,0)))
 
-
-  val reg_sixth = Reg(UInt(16.W))
-  reg_sixth := adder_out(6)
   val redsum_out_cat = Cat(adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6),adder_out(6)) //or reg_sixth
-  val redsum_out_cat_sec = Cat(adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth,adder_out(6) + reg_sixth)
+  val redsum_out_cat_sec = Cat(adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7),adder_out(7))
   val Reg_redsum_out = Reg(UInt(256.W))
    Reg_redsum_out := Mux(counter_num === UInt(0), redsum_out_cat, redsum_out_cat_sec)
 
-    printf("[checkcachecounter]**********add a [%x %x %x %x %x %x %x %x] b [%x %x %x %x %x %x %x %x] out [%x %x %x %x %x %x %x %x] \n ", Adders(7).a, Adders(6).a, Adders(5).a, Adders(4).a, Adders(3).a, Adders(2).a, Adders(1).a, Adders(0).a, Adders(7).b, Adders(6).b, Adders(5).b, Adders(4).b, Adders(3).b, Adders(2).b, Adders(1).b, Adders(0).b,adder_out(7),adder_out(6),adder_out(5),adder_out(4),adder_out(3),adder_out(2),adder_out(1),adder_out(0))
+    //printf("[checkcachecounter]**********add a [%x %x %x %x %x %x %x %x] b [%x %x %x %x %x %x %x %x] out [%x %x %x %x %x %x %x %x] \n ", Adders(7).a, Adders(6).a, Adders(5).a, Adders(4).a, Adders(3).a, Adders(2).a, Adders(1).a, Adders(0).a, Adders(7).b, Adders(6).b, Adders(5).b, Adders(4).b, Adders(3).b, Adders(2).b, Adders(1).b, Adders(0).b,adder_out(7),adder_out(6),adder_out(5),adder_out(4),adder_out(3),adder_out(2),adder_out(1),adder_out(0))
 
 
 
@@ -140,7 +144,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   //Mux(counter_num === UInt(0), vbcastx_out_cat, Cat(vbcastx_out_cat, Reg_vbcastx_out(127,0)))
 
    when (io.req.bits.fn === ALU.FN_VBCASTX){
-     printf("[checkcachecounter]invpu1_FN_VBCASTX a %x b %x out %x out %x\n ",io.req.bits.in1, io.req.bits.in2, Reg_vbcastx_out, vbcastx_out_cat)
+     //printf("[checkcachecounter]invpu1_FN_VBCASTX a %x b %x out %x out %x\n ",io.req.bits.in1, io.req.bits.in2, Reg_vbcastx_out, vbcastx_out_cat)
   }
   //////////////////////////////////////////////////////////////////////multipler////////////////////////////////////////////////////////////////////////////////////
    val Multipliers = Vec(Seq.fill(8){Module( new ValExec_MulAddRecF16_mul()).io })
@@ -159,7 +163,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   Reg_multiplier_out := Mux(counter_num === UInt(0), multiplier_out_cat, Cat(multiplier_out_cat, Reg_multiplier_out(127,0)))
 
    //when (io.req.bits.fn === ALU.FN_VMUL){
-//     printf("[checkcachecounter]invpu1_multiply a [%x %x %x %x %x %x %x %x] b [%x %x %x %x %x %x %x %x] out [%x %x %x %x %x %x %x %x] \n ", Multipliers(7).a, Multipliers(6).a, Multipliers(5).a, Multipliers(4).a, Multipliers(3).a, Multipliers(2).a, Multipliers(1).a, Multipliers(0).a, Multipliers(7).b, Multipliers(6).b, Multipliers(5).b, Multipliers(4).b, Multipliers(3).b, Multipliers(2).b, Multipliers(1).b, Multipliers(0).b,multiplier_out(7),multiplier_out(6),multiplier_out(5),multiplier_out(4),multiplier_out(3),multiplier_out(2),multiplier_out(1),multiplier_out(0))
+//     //printf("[checkcachecounter]invpu1_multiply a [%x %x %x %x %x %x %x %x] b [%x %x %x %x %x %x %x %x] out [%x %x %x %x %x %x %x %x] \n ", Multipliers(7).a, Multipliers(6).a, Multipliers(5).a, Multipliers(4).a, Multipliers(3).a, Multipliers(2).a, Multipliers(1).a, Multipliers(0).a, Multipliers(7).b, Multipliers(6).b, Multipliers(5).b, Multipliers(4).b, Multipliers(3).b, Multipliers(2).b, Multipliers(1).b, Multipliers(0).b,multiplier_out(7),multiplier_out(6),multiplier_out(5),multiplier_out(4),multiplier_out(3),multiplier_out(2),multiplier_out(1),multiplier_out(0))
   //}
 
   ////////////////////////////////////////////////VFMADD//////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -183,7 +187,7 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
    Reg_MulAdd_out := Mux(counter_num === UInt(0), MulAdd_out_cat, Cat(MulAdd_out_cat, Reg_MulAdd_out(127,0)))
 
   when (io.req.bits.fn === ALU.FN_VFMADD){
-     printf("[checkcachecounter]********************invpu1 mult_add a [%x %x %x %x %x %x %x %x] b [%x %x %x %x %x %x %x %x]  c [%x %x %x %x %x %x %x %x] out [%x %x %x %x %x %x %x %x] \n ", MulAdds(7).a, MulAdds(6).a, MulAdds(5).a, MulAdds(4).a, MulAdds(3).a, MulAdds(2).a, MulAdds(1).a, MulAdds(0).a,MulAdds(7).b, MulAdds(6).b, MulAdds(5).b, MulAdds(4).b, MulAdds(3).b, MulAdds(2).b, MulAdds(1).b, MulAdds(0).b,MulAdds(7).c, MulAdds(6).c, MulAdds(5).c, MulAdds(4).c, MulAdds(3).c, MulAdds(2).c, MulAdds(1).c, MulAdds(0).c,MulAdd_out(7),MulAdd_out(6),MulAdd_out(5),MulAdd_out(4),MulAdd_out(3),MulAdd_out(2),MulAdd_out(1),MulAdd_out(0))
+     //printf("[checkcachecounter]********************invpu1 mult_add a [%x %x %x %x %x %x %x %x] b [%x %x %x %x %x %x %x %x]  c [%x %x %x %x %x %x %x %x] out [%x %x %x %x %x %x %x %x] \n ", MulAdds(7).a, MulAdds(6).a, MulAdds(5).a, MulAdds(4).a, MulAdds(3).a, MulAdds(2).a, MulAdds(1).a, MulAdds(0).a,MulAdds(7).b, MulAdds(6).b, MulAdds(5).b, MulAdds(4).b, MulAdds(3).b, MulAdds(2).b, MulAdds(1).b, MulAdds(0).b,MulAdds(7).c, MulAdds(6).c, MulAdds(5).c, MulAdds(4).c, MulAdds(3).c, MulAdds(2).c, MulAdds(1).c, MulAdds(0).c,MulAdd_out(7),MulAdd_out(6),MulAdd_out(5),MulAdd_out(4),MulAdd_out(3),MulAdd_out(2),MulAdd_out(1),MulAdd_out(0))
   }
 
   //////////////////////////////////////////////////////////////////////comparator////////////////////////////////////////////////////////////////////////////////////
@@ -274,9 +278,9 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   io.resp.bits <> req
   io.resp.bits.data := v_alu_out
 
-//  printf("[checkcachecounter] AAAAAAAAAAAAAAAAAAAAA inside vpu number_of_elements %x n %x io.req.bits.fn %x === add %b mul %b fmadd %b fmin %b vbcast %b  prev_alu_func %x === add %b mul %b fmadd %b fmin %b vbcast %b  v_alu_out %x\n", io.req.bits.number_of_elements, n, io.req.bits.fn, io.req.bits.fn === ALU.FN_VADD, io.req.bits.fn ===  ALU.FN_VMUL, io.req.bits.fn ===  ALU.FN_VFMADD, io.req.bits.fn ===  ALU.FN_VFMIN, io.req.bits.fn === ALU.FN_VBCASTX, prev_alu_func, prev_alu_func ===  ALU.FN_VADD, prev_alu_func ===  ALU.FN_VMUL, prev_alu_func ===  ALU.FN_VFMADD, prev_alu_func ===  ALU.FN_VFMIN, prev_alu_func === ALU.FN_VBCASTX, v_alu_out)
-//   printf("[checkcachecounter] AAAAAAAAAAAAAAAAAAAAA inside vpu adder_out_cat %x Reg_adder_out %x multiplier_out_cat %x Reg_multiplier_out %x MulAdd_out_cat %x Reg_MulAdd_out %x min_out_cat %x Reg_min_out %x vbcastx_out_cat %x Reg_vbcastx_out %x max_out_cat %x Reg_max_out %x\n", adder_out_cat, Reg_adder_out, multiplier_out_cat, Reg_multiplier_out, MulAdd_out_cat, Reg_MulAdd_out, min_out_cat, Reg_min_out, vbcastx_out_cat, Reg_vbcastx_out, max_out_cat, Reg_max_out)
- //printf("[checkcachecounter]invpu2 SZ_ALU_FN.getWidth %d  el#<=8  %b  in1 %x in2 %x in3 %x [v_alu_out %x muladd %x add %x] [req.fn %x fn_vadd %x fn_vmul %x fn_vfmadd %x] \n", SZ_ALU_FN.getWidth, number_of_elements <= n, io.req.bits.in1, io.req.bits.in2, io.req.bits.in3, v_alu_out,Reg_MulAdd_out, Reg_adder_out,io.req.bits.fn, ALU.FN_VADD, ALU.FN_VMUL, ALU.FN_VFMADD)
+//  //printf("[checkcachecounter] AAAAAAAAAAAAAAAAAAAAA inside vpu number_of_elements %x n %x io.req.bits.fn %x === add %b mul %b fmadd %b fmin %b vbcast %b  prev_alu_func %x === add %b mul %b fmadd %b fmin %b vbcast %b  v_alu_out %x\n", io.req.bits.number_of_elements, n, io.req.bits.fn, io.req.bits.fn === ALU.FN_VADD, io.req.bits.fn ===  ALU.FN_VMUL, io.req.bits.fn ===  ALU.FN_VFMADD, io.req.bits.fn ===  ALU.FN_VFMIN, io.req.bits.fn === ALU.FN_VBCASTX, prev_alu_func, prev_alu_func ===  ALU.FN_VADD, prev_alu_func ===  ALU.FN_VMUL, prev_alu_func ===  ALU.FN_VFMADD, prev_alu_func ===  ALU.FN_VFMIN, prev_alu_func === ALU.FN_VBCASTX, v_alu_out)
+//   //printf("[checkcachecounter] AAAAAAAAAAAAAAAAAAAAA inside vpu adder_out_cat %x Reg_adder_out %x multiplier_out_cat %x Reg_multiplier_out %x MulAdd_out_cat %x Reg_MulAdd_out %x min_out_cat %x Reg_min_out %x vbcastx_out_cat %x Reg_vbcastx_out %x max_out_cat %x Reg_max_out %x\n", adder_out_cat, Reg_adder_out, multiplier_out_cat, Reg_multiplier_out, MulAdd_out_cat, Reg_MulAdd_out, min_out_cat, Reg_min_out, vbcastx_out_cat, Reg_vbcastx_out, max_out_cat, Reg_max_out)
+ ////printf("[checkcachecounter]invpu2 SZ_ALU_FN.getWidth %d  el#<=8  %b  in1 %x in2 %x in3 %x [v_alu_out %x muladd %x add %x] [req.fn %x fn_vadd %x fn_vmul %x fn_vfmadd %x] \n", SZ_ALU_FN.getWidth, number_of_elements <= n, io.req.bits.in1, io.req.bits.in2, io.req.bits.in3, v_alu_out,Reg_MulAdd_out, Reg_adder_out,io.req.bits.fn, ALU.FN_VADD, ALU.FN_VMUL, ALU.FN_VFMADD)
 
   //////////////////////////////////////////////////////debug statements////////////////////////////////////////////////////////////////////////////////////////////////////
 when (io.resp.valid) {
@@ -289,12 +293,12 @@ when (io.req.valid) {
 
 
 /*when (io.req.bits.vector){
-  printf("[checkcachecounter]%b@@@VPU in1 %x in2 %x \n", number_of_elements <= n, io.req.bits.in1, io.req.bits.in2)
-  printf("[checkcachecounter]@@@VPU io.a %x %x %x %x %x io.b %x %x %x %x %x  \n", (io.req.bits.in1 >> (counter_num*UInt(128)))(63,48),(io.req.bits.in1 >> (counter_num*UInt(128)))(79,64), (io.req.bits.in1 >> (counter_num*UInt(128)))(95,80), (io.req.bits.in1 >> (counter_num*UInt(128)))(111,96), (io.req.bits.in1 >> (counter_num*UInt(128)))(127,112), (io.req.bits.in2 >> (counter_num*UInt(128)))(63,48), (io.req.bits.in2 >> (counter_num*UInt(128)))(79,64), (io.req.bits.in2 >> (counter_num*UInt(128)))(95,80), (io.req.bits.in2 >> (counter_num*UInt(128)))(111,96), (io.req.bits.in2 >> (counter_num*UInt(128)))(127,112))
-  printf("[checkcachecounter]@@@VPU adder counter_num %d  alu_out(cat) %x [%x %x %x %x %x %x %x %x]\n", counter_num, adder_out_cat , adder_out(7), adder_out(6), adder_out(5), adder_out(4), adder_out(3), adder_out(2), adder_out(1), adder_out(0))
-  printf("[checkcachecounter]@@@VPU multiplier counter_num %d  alu_out(cat) %x [%x %x %x %x %x %x %x %x]\n", counter_num, multiplier_out_cat , multiplier_out(7), multiplier_out(6), multiplier_out(5), multiplier_out(4), multiplier_out(3), multiplier_out(2), multiplier_out(1), multiplier_out(0))
-  printf("[checkcachecounter]@@@VPU adder counter_num %d Reg_adder_out %x \n", counter_num, Reg_adder_out)  
-   printf("[checkcachecounter]@@@VPU start_coutn %b req_fire %b respvalid %b req_ready %b io.req.valid %b io.req.ready %b counter %d adder-reg [%x] adder_out_cat %x mult [%x] alu_out %x \n", start_count,io.req.fire(), io.resp.valid, req_ready, io.req.valid, io.req.ready, counter_num,Reg_adder_out,adder_out_cat, multiplier_out_cat,v_alu_out)
+  //printf("[checkcachecounter]%b@@@VPU in1 %x in2 %x \n", number_of_elements <= n, io.req.bits.in1, io.req.bits.in2)
+  //printf("[checkcachecounter]@@@VPU io.a %x %x %x %x %x io.b %x %x %x %x %x  \n", (io.req.bits.in1 >> (counter_num*UInt(128)))(63,48),(io.req.bits.in1 >> (counter_num*UInt(128)))(79,64), (io.req.bits.in1 >> (counter_num*UInt(128)))(95,80), (io.req.bits.in1 >> (counter_num*UInt(128)))(111,96), (io.req.bits.in1 >> (counter_num*UInt(128)))(127,112), (io.req.bits.in2 >> (counter_num*UInt(128)))(63,48), (io.req.bits.in2 >> (counter_num*UInt(128)))(79,64), (io.req.bits.in2 >> (counter_num*UInt(128)))(95,80), (io.req.bits.in2 >> (counter_num*UInt(128)))(111,96), (io.req.bits.in2 >> (counter_num*UInt(128)))(127,112))
+  //printf("[checkcachecounter]@@@VPU adder counter_num %d  alu_out(cat) %x [%x %x %x %x %x %x %x %x]\n", counter_num, adder_out_cat , adder_out(7), adder_out(6), adder_out(5), adder_out(4), adder_out(3), adder_out(2), adder_out(1), adder_out(0))
+  //printf("[checkcachecounter]@@@VPU multiplier counter_num %d  alu_out(cat) %x [%x %x %x %x %x %x %x %x]\n", counter_num, multiplier_out_cat , multiplier_out(7), multiplier_out(6), multiplier_out(5), multiplier_out(4), multiplier_out(3), multiplier_out(2), multiplier_out(1), multiplier_out(0))
+  //printf("[checkcachecounter]@@@VPU adder counter_num %d Reg_adder_out %x \n", counter_num, Reg_adder_out)  
+   //printf("[checkcachecounter]@@@VPU start_coutn %b req_fire %b respvalid %b req_ready %b io.req.valid %b io.req.ready %b counter %d adder-reg [%x] adder_out_cat %x mult [%x] alu_out %x \n", start_count,io.req.fire(), io.resp.valid, req_ready, io.req.valid, io.req.ready, counter_num,Reg_adder_out,adder_out_cat, multiplier_out_cat,v_alu_out)
  }
  */ 
 }

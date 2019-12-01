@@ -91,14 +91,14 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
   arb.io.in <> io.requestor.map(_.req)
   arb.io.out.ready := state === s_ready
 
-  //printf("[removecacheinptw] %x %x \n", io.mem.resp.bits.data, io.mem.resp.bits.DcacheCpu_data(xLen-1, 0))
+  ////printf("[removecacheinptw] %x %x \n", io.mem.resp.bits.data, io.mem.resp.bits.DcacheCpu_data(xLen-1, 0))
   val (pte, invalid_paddr) = {
     //zazad tobereplaced
     val tmp = new PTE().fromBits(/*io.mem.resp.bits.data*/ io.mem.resp.bits.DcacheCpu_data(xLen-1, 0))
     val res = Wire(init = new PTE().fromBits(/*io.mem.resp.bits.data*/ io.mem.resp.bits.DcacheCpu_data(xLen-1, 0)))
     res.ppn := tmp.ppn(ppnBits-1, 0)
 
-//    printf("[checkcachecounter]PTTTTtttttttw mem.resp %x %x tmp.ppn %x %b %b %b %b %b %b %b %b %b sw %b\n", io.mem.resp.bits.data, io.mem.resp.bits.DcacheCpu_data(xLen-1, 0), tmp.ppn, tmp.d, tmp.a, tmp.g, tmp.u, tmp.x, tmp.w, tmp.r, tmp.v, tmp.leaf(), tmp.sw())
+//    //printf("[checkcachecounter]PTTTTtttttttw mem.resp %x %x tmp.ppn %x %b %b %b %b %b %b %b %b %b sw %b\n", io.mem.resp.bits.data, io.mem.resp.bits.DcacheCpu_data(xLen-1, 0), tmp.ppn, tmp.d, tmp.a, tmp.g, tmp.u, tmp.x, tmp.w, tmp.r, tmp.v, tmp.leaf(), tmp.sw())
     when (tmp.r || tmp.w || tmp.x) {
       // for superpage mappings, make sure PPN LSBs are zero
       for (i <- 0 until pgLevels-1)
@@ -117,7 +117,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
     r_req := arb.io.out.bits
     r_req_dest := arb.io.chosen
     r_pte.ppn := io.dpath.ptbr.ppn
-  //  printf("[checkcachecounter]PTTTTTTTTTTTW  (vpn) r_req.addr %x arb.io.out.bits %x  r_pte.ppn := io.dpath.ptbr.ppn %x\n", r_req.addr, arb.io.out.bits.addr, io.dpath.ptbr.ppn)
+  //  //printf("[checkcachecounter]PTTTTTTTTTTTW  (vpn) r_req.addr %x arb.io.out.bits %x  r_pte.ppn := io.dpath.ptbr.ppn %x\n", r_req.addr, arb.io.out.bits.addr, io.dpath.ptbr.ppn)
     //it just prints 8001600
   }
 
@@ -142,7 +142,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
     for (i <- 0 until pgLevels-1)
       ccover(hit && state === s_req && count === i, s"PTE_CACHE_HIT_L$i", s"PTE cache hit, level $i")
 
-//    printf("checkcachecounter]PTTTTTttttttw hits %x hit %b pte_addr %x pte.ppn %x io.mem.resp.valid %b  \n", hits, hit, pte_addr, pte.ppn, io.mem.resp.valid)
+//    //printf("checkcachecounter]PTTTTTttttttw hits %x hit %b pte_addr %x pte.ppn %x io.mem.resp.valid %b  \n", hits, hit, pte_addr, pte.ppn, io.mem.resp.valid)
     (hit && count < pgLevels-1, Mux1H(hits, data))
   }
 
@@ -176,7 +176,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
       entry := r_pte
       entry.tag := r_tag
       ram.write(r_idx, code.encode(entry.asUInt))
-//      printf("[checkcachecounter]PTTTTTttttttw l2_refill r_pte.ppn %x r_tag %x entry.tag %x entry.ppn %x %b %b %b %b %b %b \n", r_pte.ppn, r_tag, entry.tag, entry.ppn, entry.d, entry.a, entry.u, entry.u, entry.x, entry.w, entry.r)
+//      //printf("[checkcachecounter]PTTTTTttttttw l2_refill r_pte.ppn %x r_tag %x entry.tag %x entry.ppn %x %b %b %b %b %b %b \n", r_pte.ppn, r_tag, entry.tag, entry.ppn, entry.d, entry.a, entry.u, entry.u, entry.x, entry.w, entry.r)
       val mask = UIntToOH(r_idx)
       valid := valid | mask
       g := Mux(r_pte.g, g | mask, g & ~mask)
@@ -218,7 +218,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
   io.mem.s1_kill := s1_kill || l2_hit
   io.mem.invalidate_lr := Bool(false)
 
-  //  printf("[checkcachecounter]PTTTTTTTttttw io.mem.req.valid %b io.mem.req.bits.addr %x io.mem.s1_kill %b io.mem.req.bits.phys %b  l2_hit  %b  l2_valid %b l2_pte.ppn %x l2_pte.w %b \n", io.mem.req.valid, io.mem.req.bits.addr, io.mem.s1_kill, io.mem.req.bits.phys, l2_hit, l2_valid, l2_pte.ppn, l2_pte.w)
+  //  //printf("[checkcachecounter]PTTTTTTTttttw io.mem.req.valid %b io.mem.req.bits.addr %x io.mem.s1_kill %b io.mem.req.bits.phys %b  l2_hit  %b  l2_valid %b l2_pte.ppn %x l2_pte.w %b \n", io.mem.req.valid, io.mem.req.bits.addr, io.mem.s1_kill, io.mem.req.bits.phys, l2_hit, l2_valid, l2_pte.ppn, l2_pte.w)
 
   val pmaPgLevelHomogeneous = (0 until pgLevels) map { i =>
     TLBPageLookup(edge.manager.managers, xLen, p(CacheBlockBytes), BigInt(1) << (pgIdxBits + ((pgLevels - 1 - i) * pgLevelBits)))(pte_addr >> pgIdxBits << pgIdxBits).homogeneous
@@ -237,7 +237,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
     io.requestor(i).status := io.dpath.status
     io.requestor(i).pmp := io.dpath.pmp
   }
-   // printf("[checkcachecounter]PTTTTTTTttttw response valid %b ppn %x w %b sw %b status.spie %b spp %b io.dpath.ptbr.ppn %x \n",resp_valid(0), io.requestor(0).resp.bits.pte.ppn, io.requestor(0).resp.bits.pte.w, io.requestor(0).resp.bits.pte.sw(), io.requestor(0).status.spie, io.requestor(0).status.spp, io.dpath.ptbr.ppn )
+   // //printf("[checkcachecounter]PTTTTTTTttttw response valid %b ppn %x w %b sw %b status.spie %b spp %b io.dpath.ptbr.ppn %x \n",resp_valid(0), io.requestor(0).resp.bits.pte.ppn, io.requestor(0).resp.bits.pte.w, io.requestor(0).resp.bits.pte.sw(), io.requestor(0).status.spie, io.requestor(0).status.spp, io.dpath.ptbr.ppn )
 
   // control state machine
   switch (state) {
@@ -246,7 +246,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
         state := s_req
       }
       count := UInt(0)
-//      printf("[checkcachecounter]PTTTTTttttttw  s_ready arb.io.out.fire() %b\n", arb.io.out.fire())
+//      //printf("[checkcachecounter]PTTTTTttttttw  s_ready arb.io.out.fire() %b\n", arb.io.out.fire())
     }
     is (s_req) {
       when (pte_cache_hit) {
@@ -256,11 +256,11 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
       }.elsewhen (io.mem.req.fire()) {
         state := s_wait1
       }
-  //    printf("[checkcachecounter]PTTTTTttttttw s_req pte_cache_hit %b r_pte.ppn = pte_cache_data %x io.mem.req.fire() %b\n", pte_cache_hit, pte_cache_data, io.mem.req.fire()) 
+  //    //printf("[checkcachecounter]PTTTTTttttttw s_req pte_cache_hit %b r_pte.ppn = pte_cache_data %x io.mem.req.fire() %b\n", pte_cache_hit, pte_cache_data, io.mem.req.fire()) 
     }
     is (s_wait1) {
       state := s_wait2
-    //  printf("[checkcachecounter]PTTTTTttttttw s_wait1 \n") 
+    //  //printf("[checkcachecounter]PTTTTTttttttw s_wait1 \n") 
     }
     is (s_wait2) {
       when (io.mem.s2_nack) {
@@ -277,13 +277,13 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
           state := s_ready
           resp_valid(r_req_dest) := true
         }
-      //  printf("[checkcachecounter]PTTTTTttttttw s_wait2 io.mem.s2_nack %b io.mem.resp.valid %b pte.ppn %x pte.w %b pte.sw %b  traverse %b l2_refill %b\n", io.mem.s2_nack, io.mem.resp.valid, pte.ppn, pte.w, pte.sw(), traverse, l2_refill) 
+      //  //printf("[checkcachecounter]PTTTTTttttttw s_wait2 io.mem.s2_nack %b io.mem.resp.valid %b pte.ppn %x pte.w %b pte.sw %b  traverse %b l2_refill %b\n", io.mem.s2_nack, io.mem.resp.valid, pte.ppn, pte.w, pte.sw(), traverse, l2_refill) 
       }
       when (io.mem.s2_xcpt.ae.ld) {
         resp_ae := true
         state := s_ready
         resp_valid(r_req_dest) := true
-//        printf("[checkcachecounter]PTTTTTttttttw io.mem.s2_xcpt.ae.ld \n") 
+//        //printf("[checkcachecounter]PTTTTTttttttw io.mem.s2_xcpt.ae.ld \n") 
       }
     }
   }
@@ -293,7 +293,7 @@ class PTW(n: Int)(implicit edge: TLEdgeOut, p: Parameters) extends CoreModule()(
     resp_ae := false
     r_pte := l2_pte
     count := pgLevels-1
-  //  printf("[checkcachecounter]PTTTTTttttttw l2_hit l2_pte.ppn %x l2_pte.w %b l2_pte.sw %b \n", l2_pte.ppn, l2_pte.w, l2_pte.sw()) 
+  //  //printf("[checkcachecounter]PTTTTTttttttw l2_hit l2_pte.ppn %x l2_pte.w %b l2_pte.sw %b \n", l2_pte.ppn, l2_pte.w, l2_pte.sw()) 
   }
 
   for (i <- 0 until pgLevels) {

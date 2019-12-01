@@ -695,8 +695,8 @@ class FPU(cfg: FPUParams)(implicit p: Parameters) extends FPUModule()(p) {
     val wdata = recode(load_wb_data, load_wb_double)
     regfile(load_wb_tag) := wdata
     assert(consistent(wdata))
-    if (enableCommitLog)
-      printf("f%d p%d 0x%x\n", load_wb_tag, load_wb_tag + 32, load_wb_data)
+    //if (enableCommitLog)
+      //printf("f%d p%d 0x%x\n", load_wb_tag, load_wb_tag + 32, load_wb_data)
   }
 
   val ex_ra = List.fill(3)(Reg(UInt()))
@@ -806,7 +806,7 @@ class FPU(cfg: FPUParams)(implicit p: Parameters) extends FPUModule()(p) {
     assert(consistent(wdata))
     regfile(waddr) := wdata
     if (enableCommitLog) {
-      printf("f%d p%d 0x%x\n", waddr, waddr + 32, ieee(wdata))
+      //printf("f%d p%d 0x%x\n", waddr, waddr + 32, ieee(wdata))
     }
   }
   when (wbInfo(0).cp && wen(0)) {

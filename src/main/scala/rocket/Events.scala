@@ -12,8 +12,8 @@ class EventSet(gate: (UInt, UInt) => Bool, events: Seq[(String, () => Bool)]) {
   def hits = events.map(_._2()).asUInt
   def check(mask: UInt) = gate(mask, hits)
   def dump() {
-    for (((name, _), i) <- events.zipWithIndex)
-      when (check(1.U << i)) { printf(s"Event $name\n") }
+    //for (((name, _), i) <- events.zipWithIndex)
+      //when (check(1.U << i)) { //printf(s"Event $name\n") }
   }
   def withCovers {
     events.zipWithIndex.foreach {

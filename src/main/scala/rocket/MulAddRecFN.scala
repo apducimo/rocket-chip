@@ -353,7 +353,7 @@ class MulAddRecFN(expWidth: Int, sigWidth: Int) extends Module
     roundRawFNToRecFN.io.roundingMode := io.roundingMode
     roundRawFNToRecFN.io.detectTininess := io.detectTininess
   io.out            := roundRawFNToRecFN.io.out
-//  printf("[checkcachecounter]****************** muladd result %x %x round %x\n", mulAddResult, mulAddRecFNToRaw_postMul.io.mulAddResult, io.out)
+//  //printf("[checkcachecounter]****************** muladd result %x %x round %x\n", mulAddResult, mulAddRecFNToRaw_postMul.io.mulAddResult, io.out)
     io.exceptionFlags := roundRawFNToRecFN.io.exceptionFlags
 }
 

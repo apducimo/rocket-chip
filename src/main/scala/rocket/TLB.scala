@@ -123,7 +123,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
 
   val vpn = io.req.bits.vaddr(vaddrBits-1, pgIdxBits)
   val lookup_tag = Cat(io.ptw.ptbr.asid, vpn)
-// printf("[checkcachecounter]TLLLlllllllllb lookup_tag %x  vpn %x  \n", lookup_tag, vpn)
+// //printf("[checkcachecounter]TLLLlllllllllb lookup_tag %x  vpn %x  \n", lookup_tag, vpn)
   val hitsVec = (0 until totalEntries).map { i => if (!usingVM) false.B else vm_enabled && {
     var tagMatch = valid(i)
     for (j <- 0 until pgLevels) {
@@ -166,7 +166,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
 
     valid := valid | UIntToOH(waddr)
     reg_entries(waddr) := newEntry.asUInt
-//    printf("[checkcachecounter]TLLLLLLLLLLllb in tlb refill new_entry newEntry.ppn %x newEntry.tag %x newEntry.sw %b newEntry.eff %b newEntry.sr %b newEntry.sx %b \n", newEntry.ppn, newEntry.tag, newEntry.sw, newEntry.eff, newEntry.sr, newEntry.sx )
+//    //printf("[checkcachecounter]TLLLLLLLLLLllb in tlb refill new_entry newEntry.ppn %x newEntry.tag %x newEntry.sw %b newEntry.eff %b newEntry.sr %b newEntry.sx %b \n", newEntry.ppn, newEntry.tag, newEntry.sw, newEntry.eff, newEntry.sr, newEntry.sx )
   }
 
   val plru = new PseudoLRU(normalEntries)
@@ -184,6 +184,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
   val paa_array = Cat(Fill(2, prot_aa), entries.init.map(_.paa).asUInt)
   val pal_array = Cat(Fill(2, prot_al), entries.init.map(_.pal).asUInt)
   val eff_array = Cat(Fill(2, prot_eff), entries.init.map(_.eff).asUInt)
+  //printf("[TLB]: eff_array %x\n", eff_array)
   val c_array = Cat(Fill(2, cacheable), entries.init.map(_.c).asUInt)
   val prefetchable_array = Cat(cacheable && homogeneous, false.B, entries.init.map(_.c).asUInt)
 
@@ -224,7 +225,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
   io.req.ready := state === s_ready
   io.resp.pf.ld := (bad_va && isRead(io.req.bits.cmd)) || (pf_ld_array & hits).orR
   io.resp.pf.st := (bad_va && isWrite(io.req.bits.cmd)) || (pf_st_array & hits).orR
-//  printf("[checkcachecounter]TLLLLllllllllb tlb io.resp.pf.st %b bad_va %b isWrite(io.req.bits.cmd) %b pf_st_array %x [ w_array %x | ptw_ae_array %x] hits %x w_array [priv_rw_ok %x & entries.map(_.sw).asUInt %x ]  tlb_hit %b tlb_miss %b = vm_enabled %b && !bad_va %b && !tlb_hit %b && !io.req.bits.sfence.valid %b   io.resp.paddr %x  [ppn %x io.req.bits.vaddr %x] io.resp.miss %b := do_refill %b || tlb_miss %b || multipleHits %b |||| pf_inst_array %x io.resp.pf.inst %x |||| io.resp.pf.inst %b bad_va %b pf_inst_array %x hits %x x_array %x  ptw_ae_array %x  priv_x_ok %x  entries.map(_.sx).asUInt %x  priv_s %x entries.map(_.u).asUInt %x |||| priv %b = if (instruction %b ) io.ptw.status.prv %b else io.ptw.status.dprv %b\n", io.resp.pf.st, bad_va, isWrite(io.req.bits.cmd), pf_st_array, w_array, ptw_ae_array, hits, priv_rw_ok, entries.map(_.sw).asUInt, tlb_hit, tlb_miss, vm_enabled, !bad_va, !tlb_hit, !io.req.bits.sfence.valid, io.resp.paddr, ppn, io.req.bits.vaddr, io.resp.miss, do_refill, tlb_miss, multipleHits, pf_inst_array, io.resp.pf.inst, io.resp.pf.inst, bad_va, pf_inst_array, hits, x_array, ptw_ae_array, priv_x_ok, entries.map(_.sx).asUInt, priv_s,entries.map(_.u).asUInt, priv, instruction, io.ptw.status.prv, io.ptw.status.dprv)
+//  //printf("[checkcachecounter]TLLLLllllllllb tlb io.resp.pf.st %b bad_va %b isWrite(io.req.bits.cmd) %b pf_st_array %x [ w_array %x | ptw_ae_array %x] hits %x w_array [priv_rw_ok %x & entries.map(_.sw).asUInt %x ]  tlb_hit %b tlb_miss %b = vm_enabled %b && !bad_va %b && !tlb_hit %b && !io.req.bits.sfence.valid %b   io.resp.paddr %x  [ppn %x io.req.bits.vaddr %x] io.resp.miss %b := do_refill %b || tlb_miss %b || multipleHits %b |||| pf_inst_array %x io.resp.pf.inst %x |||| io.resp.pf.inst %b bad_va %b pf_inst_array %x hits %x x_array %x  ptw_ae_array %x  priv_x_ok %x  entries.map(_.sx).asUInt %x  priv_s %x entries.map(_.u).asUInt %x |||| priv %b = if (instruction %b ) io.ptw.status.prv %b else io.ptw.status.dprv %b\n", io.resp.pf.st, bad_va, isWrite(io.req.bits.cmd), pf_st_array, w_array, ptw_ae_array, hits, priv_rw_ok, entries.map(_.sw).asUInt, tlb_hit, tlb_miss, vm_enabled, !bad_va, !tlb_hit, !io.req.bits.sfence.valid, io.resp.paddr, ppn, io.req.bits.vaddr, io.resp.miss, do_refill, tlb_miss, multipleHits, pf_inst_array, io.resp.pf.inst, io.resp.pf.inst, bad_va, pf_inst_array, hits, x_array, ptw_ae_array, priv_x_ok, entries.map(_.sx).asUInt, priv_s,entries.map(_.u).asUInt, priv, instruction, io.ptw.status.prv, io.ptw.status.dprv)
 
   io.resp.pf.inst := bad_va || (pf_inst_array & hits).orR
   io.resp.ae.ld := (ae_ld_array & hits).orR
@@ -249,7 +250,7 @@ class TLB(instruction: Boolean, lgMaxSize: Int, nEntries: Int)(implicit edge: TL
       r_refill_tag := lookup_tag
       r_refill_waddr := repl_waddr
       r_req := io.req.bits
-//      printf("[checkcachecounter]TLLLLllllllllb in tlb req valid and tlb_miss  io.req.bits.vaddr %x part of vaddr lookup_tag %x \n",  io.req.bits.vaddr, lookup_tag)
+//      //printf("[checkcachecounter]TLLLLllllllllb in tlb req valid and tlb_miss  io.req.bits.vaddr %x part of vaddr lookup_tag %x \n",  io.req.bits.vaddr, lookup_tag)
     }
     when (state === s_request) {
       when (sfence) { state := s_ready }
