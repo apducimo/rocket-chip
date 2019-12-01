@@ -36,7 +36,7 @@ def vectormask = {
   val Rbyteoff = Rtag >> 3
   val word = Rbyteoff
    val wordinHL =Rbyteoff(1, 0)
-  printf("[cacheaccesstestmodword] addr %x Rtag[%x] Rbyteoff[%x] word[%x] wordinHL[%x] \n",addr, Rtag, Rbyteoff, word, wordinHL)
+  //printf("[cacheaccesstestmodword] addr %x Rtag[%x] Rbyteoff[%x] word[%x] wordinHL[%x] \n",addr, Rtag, Rbyteoff, word, wordinHL)
   val sel0 = (wordinHL === UInt(0x0))
   val sel1 = (wordinHL === UInt(0x1))
   val sel2 = (wordinHL === UInt(0x2))

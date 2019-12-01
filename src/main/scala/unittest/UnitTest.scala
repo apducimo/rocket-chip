@@ -28,7 +28,7 @@ trait UnitTestModule extends MultiIOModule with HasUnitTestIO {
 abstract class UnitTest(val timeout: Int = 4096) extends Module with UnitTestLegacyModule {
   val testName = this.getClass.getSimpleName
 
-  when (io.start) { printf(s"Started UnitTest $testName\n") }
+  //when (io.start) { //printf(s"Started UnitTest $testName\n") }
 
   val timed_out = SimpleTimer(timeout, io.start, io.finished)
   assert(!timed_out, s"UnitTest $testName timed out")

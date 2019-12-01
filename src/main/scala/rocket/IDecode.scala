@@ -164,7 +164,10 @@ class I64Decode(implicit val p: Parameters) extends DecodeConstants
     //zazad begins
     VLSD_S->     List(Y,N,N,N,N,N,N,Y,Y,A2_IMM, A1_RS1, IMM_I, DW_XPR,FN_ADD,   Y,M_XRD,      MT_W, N,N,N,N,N,N,Y,CSR.N,N,N,N,N,Y,Y,N),
     VLSD_V->     List(Y,N,N,N,N,N,N,Y,Y,A2_IMM, A1_RS1, IMM_I, DW_XPR,FN_ADD,   Y,M_XRD,      MT_W, N,N,N,N,N,N,Y,CSR.N,N,N,N,N,Y,N,N),
-    VSSD->       List(Y,N,N,N,N,N,Y,Y,Y,A2_IMM, A1_RS1, IMM_S, DW_XPR,FN_ADD,   Y,M_XWR,      MT_W, N,N,N,N,N,N,N,CSR.N,N,N,N,N,Y,N,N),
+    VSSD_S->     List(Y,N,N,N,N,N,Y,Y,Y,A2_IMM, A1_RS1, IMM_S, DW_XPR,FN_ADD,   Y,M_XWR,      MT_H, N,N,N,N,N,N,N,CSR.N,N,N,N,N,Y,Y,N),
+    VSSD_V->     List(Y,N,N,N,N,N,Y,Y,Y,A2_IMM, A1_RS1, IMM_S, DW_XPR,FN_ADD,   Y,M_XWR,      MT_H, N,N,N,N,N,N,N,CSR.N,N,N,N,N,Y,N,N),
+    VSSD_V_V10-> List(Y,N,N,N,N,N,Y,Y,Y,A2_IMM, A1_RS1, IMM_S, DW_XPR,FN_ADD,   Y,M_XWR,      MT_H, N,N,N,N,N,N,N,CSR.N,N,N,N,N,Y,N,N), // APD FIXME
+    VSSD_V_V11-> List(Y,N,N,N,N,N,Y,Y,Y,A2_IMM, A1_RS1, IMM_S, DW_XPR,FN_ADD,   Y,M_XWR,      MT_H, N,N,N,N,N,N,N,CSR.N,N,N,N,N,Y,N,N), // APD FIXME
     VLXD->       List(Y,N,N,N,N,N,N,Y,Y,A2_IMM, A1_RS1, IMM_I, DW_XPR,FN_ADD,   Y,M_XRD,      MT_W, N,N,N,N,N,N,Y,CSR.N,N,N,N,N,Y,N,Y),
     VSXD->       List(Y,N,N,N,N,N,Y,Y,Y,A2_IMM, A1_RS1, IMM_S, DW_XPR,FN_ADD,   Y,M_XWR,      MT_W, N,N,N,N,N,N,N,CSR.N,N,N,N,N,Y,N,Y),
     //zazad ends

@@ -114,8 +114,8 @@ class TestRobin(txns: Int = 128, timeout: Int = 500000)(implicit p: Parameters) 
   sink.ready := ready
 
   TLArbiter(TLArbiter.roundRobin)(sink, sources.zipWithIndex.map { case (z, i) => (UInt(i), z) }:_*)
-  when (sink.fire()) { printf("TestRobin: %d\n", sink.bits) }
-  when (!sink.fire()) { printf("TestRobin: idle (%d %d)\n", valid, ready) }
+  //when (sink.fire()) { //printf("TestRobin: %d\n", sink.bits) }
+  //when (!sink.fire()) { //printf("TestRobin: idle (%d %d)\n", valid, ready) }
 
   count := count + UInt(1)
   io.finished := count >= UInt(txns)

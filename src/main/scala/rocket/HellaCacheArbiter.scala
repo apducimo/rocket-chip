@@ -37,7 +37,8 @@ class HellaCacheArbiter(n: Int)(implicit p: Parameters) extends Module
         io.mem.req.bits.vector_cache_access_type := req.bits.vector_cache_access_type
         io.mem.req.bits.cnt_cache_vsd := req.bits.cnt_cache_vsd
         io.mem.req.bits.element_number := req.bits.element_number
-        printf("[checkcachecounter]#########################insdie hellacachearbiter elemnt_number %x  %x \n", io.mem.req.bits.element_number, req.bits.element_number)
+        io.mem.req.bits.vec_scalar := req.bits.vec_scalar
+        //printf("[checkcachecounter]#########################insdie hellacachearbiter elemnt_number %x  %x \n", io.mem.req.bits.element_number, req.bits.element_number)
         io.mem.req.bits.is_cache_access_vec := req.bits.is_cache_access_vec
         io.mem.req.bits.return_addr := req.bits.addr
         //zazad ends

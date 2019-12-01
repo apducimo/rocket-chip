@@ -34,6 +34,7 @@ class DCacheDataReq(implicit p: Parameters) extends L1HellaCacheBundle()(p) {
   val cnt_cache_vsd = Bits (width = 5)
   val element_number = UInt(width = 5)
   val is_cache_access_vec = Bool()
+  val vec_scalar          = Bool()
 }
 
 class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModule()(p) {
@@ -62,12 +63,12 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
 
   //zazad begins
   //generate mask based on the element position in the cache line
-  //2 bytes masks for 16-bit width data elements
+  //4 bytes masks for 32-bit width data elements
   val mask_vector_offset = Rtagt (4,0)
   //val s1_vmaskval = UInt("hffffffff")
-  val s1_vmaskval = Cat(UInt(1) << (UInt(32)-(io.req.bits.element_number*UInt(4))), ((UInt(1) << (io.req.bits.element_number*UInt(4))) - UInt(1)))(31,0)
+  val s1_vmaskval = Mux(io.req.bits.vec_scalar,Cat(UInt(1) << (UInt(32)-(1*UInt(4))), ((UInt(1) << (1*UInt(4))) - UInt(1)))(31,0), Cat(UInt(1) << (UInt(32)-(io.req.bits.element_number*UInt(4))), ((UInt(1) << (io.req.bits.element_number*UInt(4))) - UInt(1)))(31,0))
   val s1_vmaskval_shift_offset = (s1_vmaskval << io.req.bits.addr(4,0))(31,0) 
-  val element_size_in_byte = UInt(2)
+  val element_size_in_byte = UInt(4)
   val scatter_gather_vmaskval = Wire(UInt(32.W))
   val scatter_gather_vwdata   = Wire(UInt(256.W))
   val extracted_bits = Wire(UInt(32.W))
@@ -76,15 +77,15 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
   scatter_gather_vwdata   := extracted_bits << mask_vector_offset * UInt(8)
   val vwdataval= Mux(io.req.bits.vector_cache_access_type, (io.req.bits.vwdata << (io.req.bits.addr(4,0) * UInt(8)))(255,0), scatter_gather_vwdata)
   val vmaskval = Mux(io.req.bits.vector_cache_access_type, s1_vmaskval_shift_offset, scatter_gather_vmaskval)
- printf("[checkcachecounter]###insidecache cnt_cache_vsd %d  mask_vector_offset %d scatter_gather_mask %x maskval %x cacheaccesstype %b  data %x extracted_data %x scatter %x final %x\n",io.req.bits.cnt_cache_vsd, mask_vector_offset, scatter_gather_vmaskval, vmaskval, io.req.bits.vector_cache_access_type, io.req.bits.vwdata,extracted_bits, scatter_gather_vwdata, vwdataval)
-  printf("[checkcachecounter] +++++++++++insidedcache #element %x  s1_vmaskval %x scatter_gather_vmaskval %x  vector_cache_access_type %x final vmaskval %x \n ", io.req.bits.element_number, s1_vmaskval, scatter_gather_vmaskval, io.req.bits.vector_cache_access_type, vmaskval)
+ //printf("[checkcachecounter]###insidecache is_cache_access_vec %x cnt_cache_vsd %d  mask_vector_offset %d scatter_gather_mask %x maskval %x cacheaccesstype %b  data %x extracted_data %x scatter %x final %x\n",io.req.bits.is_cache_access_vec,io.req.bits.cnt_cache_vsd, mask_vector_offset, scatter_gather_vmaskval, vmaskval, io.req.bits.vector_cache_access_type, io.req.bits.vwdata,extracted_bits, scatter_gather_vwdata, vwdataval)
+  //printf("[checkcachecounter] +++++++++++insidedcache #element %x  s1_vmaskval %x scatter_gather_vmaskval %x  vector_cache_access_type %x final vmaskval %x \n ", io.req.bits.element_number, s1_vmaskval, scatter_gather_vmaskval, io.req.bits.vector_cache_access_type, vmaskval)
   val veccMask = vmaskval.toBools
   val vwMask = if (nWays == 1) veccMask else (0 until nWays).flatMap(i => veccMask.map(_ && io.req.bits.way_en(i)))
   val vwWords = vwdataval.grouped(256)
 
   val testmul = io.req.bits.element_number*UInt(2);
 
-  printf("[checkcachecounter]@@@@@@@@@@@@@@@@@incache  el# %x test_mul %x s1_vmaskval %x s1_vmaskval_shift_offset %x [first_half %x second_half %x fixed %x [el*2 %x 1<<el*2 %x]] access_type %b scatter_gather_mask %x vmaskval %x\n",io.req.bits.element_number,testmul,s1_vmaskval, s1_vmaskval_shift_offset, UInt(1) << (UInt(32)-(io.req.bits.element_number*UInt(2))) ,UInt(1) << (io.req.bits.element_number*UInt(2)) - UInt(1), ((UInt(1) << (io.req.bits.element_number*UInt(2))) - UInt(1)), io.req.bits.element_number*UInt(2), UInt(1) << (io.req.bits.element_number*UInt(2)) ,io.req.bits.vector_cache_access_type,  scatter_gather_vmaskval, vmaskval)
+  //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@incache  el# %x test_mul %x s1_vmaskval %x s1_vmaskval_shift_offset %x [first_half %x second_half %x fixed %x [el*2 %x 1<<el*2 %x]] access_type %b scatter_gather_mask %x vmaskval %x\n",io.req.bits.element_number,testmul,s1_vmaskval, s1_vmaskval_shift_offset, UInt(1) << (UInt(32)-(io.req.bits.element_number*UInt(2))) ,UInt(1) << (io.req.bits.element_number*UInt(2)) - UInt(1), ((UInt(1) << (io.req.bits.element_number*UInt(2))) - UInt(1)), io.req.bits.element_number*UInt(2), UInt(1) << (io.req.bits.element_number*UInt(2)) ,io.req.bits.vector_cache_access_type,  scatter_gather_vmaskval, vmaskval)
 
   //zazad ends
   val vectordatatemp = Mux(sel3,io.req.bits.wdata << 192 , Mux(sel2, Cat (UInt(1<<64)(63,1), UInt (0), io.req.bits.wdata <<  128), Mux(sel1,Cat (UInt(1<<64)(63,1), UInt (0),UInt(1<<64)(63,1),UInt (0), io.req.bits.wdata <<  64) , Mux(sel0,Cat (UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0), io.req.bits.wdata), UInt(0)))))
@@ -94,33 +95,35 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
   val rdata = for ((array, i) <- data_arrays zipWithIndex) yield {
 
     val valid = io.req.valid && (Bool(data_arrays.size == 1) || io.req.bits.wordMask(i))
+    //printf ("io.req.valid %x data_arrays.size %x io.req.bits.wordMask(%x) %x io.req.bits.write %x\n", io.req.valid, data_arrays.size, i, io.req.bits.wordMask(i), io.req.bits.write)
     when (valid && io.req.bits.write){
-      ///printf ("[CacheChecksmodified]%x w ============================================================================================================= \n",io.req.bits.addr)
-      ///printf ("[CacheChecksmodified]%x w io.addr %x  io.eccmask [%x] io.wayen[%b][%b][%b][%b] io.wdata[%x] wordinhl[%d] sel[%b][%b][%b][%b] addr %x  shiftedmask[%x] wwrods[%x]\n", io.req.bits.addr, io.req.bits.addr,io.req.bits.eccMask,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),io.req.bits.wdata, wordinHL, sel3, sel2, sel1, sel0,addr,shiftedmask, wWords(0))
+      //printf ("[CacheChecksmodified]%x w ============================================================================================================= \n",io.req.bits.addr)
+      //printf ("[CacheChecksmodified]%x w io.addr %x  io.eccmask [%x] io.wayen[%b][%b][%b][%b] io.wdata[%x] wordinhl[%d] sel[%b][%b][%b][%b] addr %x  shiftedmask[%x] wwrods[%x]\n", io.req.bits.addr, io.req.bits.addr,io.req.bits.eccMask,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),io.req.bits.wdata, wordinHL, sel3, sel2, sel1, sel0,addr,shiftedmask, wWords(0))
   
-       /// printf ("[CacheChecksmodified]%x w wMask %b  %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b \n",io.req.bits.addr, wMask(0), wMask(8), wMask(16), wMask(24), wMask(32), wMask(40),wMask(41),wMask(42),wMask(43),wMask(44),wMask(45),wMask(46),wMask(47),wMask(48), wMask(56), wMask(64), wMask(72), wMask(80), wMask(88), wMask(96), wMask(104), wMask(112),wMask(120))
+       /// //printf ("[CacheChecksmodified]%x w wMask %b  %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b \n",io.req.bits.addr, wMask(0), wMask(8), wMask(16), wMask(24), wMask(32), wMask(40),wMask(41),wMask(42),wMask(43),wMask(44),wMask(45),wMask(46),wMask(47),wMask(48), wMask(56), wMask(64), wMask(72), wMask(80), wMask(88), wMask(96), wMask(104), wMask(112),wMask(120))
 
-      ///printf("[CacheChecksmodified]%x w \n\n", io.req.bits.addr)
+      /////printf("[CacheChecksmodified]%x w \n\n", io.req.bits.addr)
     }
 
     when (valid && !io.req.bits.write){
-      ///printf ("[CacheChecksmodified]%x r ============================================================================================================= \n", io.req.bits.addr)
-      ///printf ("[CacheChecksmodified]%x r io.addr %x io.wayen[%b][%b][%b][%b] addr %x\n", io.req.bits.addr,io.req.bits.addr,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),addr)
+      /////printf ("[CacheChecksmodified]%x r ============================================================================================================= \n", io.req.bits.addr)
+      //printf ("[CacheChecksmodified]%x r io.addr %x io.wayen[%b][%b][%b][%b] addr %x\n", io.req.bits.addr,io.req.bits.addr,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),addr)
     }
 
-    when (valid && io.req.bits.write && !io.req.bits.isvec) {
+    when (valid && io.req.bits.write && !io.req.bits.isvec && !io.req.bits.vec_scalar) {
       val wData = wWords(i).grouped(encBits)
       array.write(addr, Vec((0 until nWays).flatMap(i => wData)), wMask)//32 byte is written into the cache for four ways simultaneously
       printf ("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache scalar write %x io.req.bits.addr %x io.req.bits.wdata %x io.req.bits.vwadat %x io.req.bits.eccmask %x eccmask %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b\n", io.req.bits.write, io.req.bits.addr,io.req.bits.wdata,io.req.bits.vwdata, io.req.bits.eccMask, wMask(31), wMask(30), wMask(29), wMask(28), wMask(27), wMask(26), wMask(25), wMask(24), wMask(23), wMask(22), wMask(21), wMask(20), wMask(19), wMask(18), wMask(17), wMask(16), wMask(15), wMask(14), wMask(13), wMask(12), wMask(11), wMask(10), wMask(9), wMask(8), wMask(7), wMask(6), wMask(5), wMask(4), wMask(3), wMask(2), wMask(1), wMask(0))
-     printf ("[trackloadsnew] scalar sel %b %b %b %b \n", sel3, sel2, sel1, sel0)
-    }.elsewhen (valid && io.req.bits.write && io.req.bits.isvec){
+     //printf("[DCache]: eccBits %x wordBits %x nWays %x io.req.bits.way_en %x shiftedmask %x\n", eccBits, wordBits, nWays, io.req.bits.way_en, shiftedmask)
+      //printf ("[trackloadsnew] scalar sel %b %b %b %b \n", sel3, sel2, sel1, sel0)
+    }.elsewhen (valid && io.req.bits.write && (io.req.bits.isvec || !io.req.bits.isvec && io.req.bits.vec_scalar)){
       val vwData = vwWords(i).grouped(encBits)
       array.write(addr, Vec((0 until nWays).flatMap(i => vwData)), vwMask)//32 byte is written into the cache for four ways simultaneously
-      printf ("[checkcachecounter]@@@@@@@@@@@@@@@incache vector el# %x write %xx  nways %x vwwords %x  vector addr %x shifteddata %x wdata %x wdata %x veccmask %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b vwMask %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b\n",io.req.bits.element_number,io.req.bits.write, nWays,vwWords(0),io.req.bits.addr, (io.req.bits.vwdata << (io.req.bits.addr(4,0) * UInt(8)))(255,0), io.req.bits.vwdata,io.req.bits.wdata,veccMask(31),veccMask(30),veccMask(29),veccMask(28),veccMask(27),veccMask(26),veccMask(25),veccMask(24),veccMask(23),veccMask(22),veccMask(21),veccMask(20),veccMask(19),veccMask(18),veccMask(17),veccMask(16),veccMask(15),veccMask(14),veccMask(13),veccMask(12),veccMask(11),veccMask(10),veccMask(9),veccMask(8),veccMask(7),veccMask(6),veccMask(5),veccMask(4),veccMask(3),veccMask(2),veccMask(1),veccMask(0), vwMask(127), vwMask(126),vwMask(125), vwMask(124), vwMask(123), vwMask(122),vwMask(121),vwMask(120), vwMask(119), vwMask(118), vwMask(117), vwMask(116), vwMask(115), vwMask(114), vwMask(113), vwMask(112), vwMask(111), vwMask(110), vwMask(109), vwMask(108), vwMask(107), vwMask(106), vwMask(105), vwMask(104), vwMask(103), vwMask(102), vwMask(101), vwMask(100), vwMask(99), vwMask(98), vwMask(97), vwMask(96))
-      printf ("[checkcachecounter] vector sel %b %b %b %b \n", sel3, sel2, sel1, sel0)
+      printf ("[checkcachecounter]@@@@@@@@@@@@@@@incache vector el# %x write %xx  nways %x vwwords %x  vector addr %x shifteddata %x wdata %x wdata %x veccmask %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b vwMask %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b\n io.req.bits.isvec %x io.req.bits.vec_scalar %x\n",io.req.bits.element_number,io.req.bits.write, nWays,vwWords(0),io.req.bits.addr, (io.req.bits.vwdata << (io.req.bits.addr(4,0) * UInt(8)))(255,0), io.req.bits.vwdata,io.req.bits.wdata,veccMask(31),veccMask(30),veccMask(29),veccMask(28),veccMask(27),veccMask(26),veccMask(25),veccMask(24),veccMask(23),veccMask(22),veccMask(21),veccMask(20),veccMask(19),veccMask(18),veccMask(17),veccMask(16),veccMask(15),veccMask(14),veccMask(13),veccMask(12),veccMask(11),veccMask(10),veccMask(9),veccMask(8),veccMask(7),veccMask(6),veccMask(5),veccMask(4),veccMask(3),veccMask(2),veccMask(1),veccMask(0), vwMask(127), vwMask(126),vwMask(125), vwMask(124), vwMask(123), vwMask(122),vwMask(121),vwMask(120), vwMask(119), vwMask(118), vwMask(117), vwMask(116), vwMask(115), vwMask(114), vwMask(113), vwMask(112), vwMask(111), vwMask(110), vwMask(109), vwMask(108), vwMask(107), vwMask(106), vwMask(105), vwMask(104), vwMask(103), vwMask(102), vwMask(101), vwMask(100), vwMask(99), vwMask(98), vwMask(97), vwMask(96), io.req.bits.isvec, io.req.bits.vec_scalar)
+      //printf ("[checkcachecounter] vector sel %b %b %b %b \n", sel3, sel2, sel1, sel0)
     }
     val data = array.read(addr, valid && !io.req.bits.write)//4*32B is read
-//  printf("[checkcachecounter]@@@@@@@@@@@@@@@@@incache read data from cache %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x\n",   data(127),data(32),data(31),data(30),data(29),data(28),data(27),data(26),data(25),data(24),data(23),data(22),data(21),data(20),data(19),data(18),data(17),data(16),data(15),data(14),data(13),data(12),data(11),data(10),data(9),data(8),data(7),data(6),data(5),data(4), data(3), data(2), data(1),data(0))
+    //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@incache read data from cache %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x\n",   data(127),data(32),data(31),data(30),data(29),data(28),data(27),data(26),data(25),data(24),data(23),data(22),data(21),data(20),data(19),data(18),data(17),data(16),data(15),data(14),data(13),data(12),data(11),data(10),data(9),data(8),data(7),data(6),data(5),data(4), data(3), data(2), data(1),data(0))
     data.grouped(32).map(_.asUInt).toSeq //grouped into 4 32B
   }
 
@@ -128,34 +131,33 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
   //val temprdata1= rdata(1).asUInt
   //val temprdata2= rdata(2).asUInt
   //val temprdata3= rdata(3).asUInt
-  printf ("[checkcachecounter] %x rdata(0) %x %x \n\n",io.req.bits.addr,temprdata0(1023,0), temprdata0)
-  //printf ("[CacheChecksmodified]%x rdata(1) %x %x \n\n",io.req.bits.addr,temprdata1(255,0), temprdata1)
-  //printf ("[CacheChecksmodified]%x rdata(2) %x %x \n\n",io.req.bits.addr,temprdata2(255,0), temprdata2)
-  //printf ("[CacheChecksmodified]%x rdata(3) %x %x \n\n",io.req.bits.addr,temprdata3(255,0), temprdata3)
+  //printf ("[checkcachecounter] %x rdata(0) %x %x \n\n",io.req.bits.addr,temprdata0(1023,0), temprdata0)
+  ////printf ("[CacheChecksmodified]%x rdata(1) %x %x \n\n",io.req.bits.addr,temprdata1(255,0), temprdata1)
+  ////printf ("[CacheChecksmodified]%x rdata(2) %x %x \n\n",io.req.bits.addr,temprdata2(255,0), temprdata2)
+  ////printf ("[CacheChecksmodified]%x rdata(3) %x %x \n\n",io.req.bits.addr,temprdata3(255,0), temprdata3)
 
   (io.resp_vector zip rdata.transpose).foreach { case (resp_vector, data) => resp_vector := data.asUInt }
 
-  ////printf ("[CacheChecksmodified]%x io.resp.vector %x %x %x %x   \n\n",io.req.bits.addr, io.resp_vector(0), io.resp_vector(1), io.resp_vector(2), io.resp_vector(3))
+  //////printf ("[CacheChecksmodified]%x io.resp.vector %x %x %x %x   \n\n",io.req.bits.addr, io.resp_vector(0), io.resp_vector(1), io.resp_vector(2), io.resp_vector(3))
 
   when (io.req.valid && !io.req.bits.write){
      val extractedword_0 = Mux(sel3,io.resp_vector(0) (255,192), Mux(sel2, io.resp_vector(0) (191,128) , Mux(sel1,  io.resp_vector(0) (127,64) ,io.resp_vector(0) (63,0))))
-     ////printf ("[checkdata]%x  %x  0********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_0, io.resp_vector(0) (255,192), io.resp_vector(0) (191,128) , io.resp_vector(0) (127,64) ,io.resp_vector(0) (63,0), sel3, sel2, sel1,sel0)
+     //////printf ("[checkdata]%x  %x  0********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_0, io.resp_vector(0) (255,192), io.resp_vector(0) (191,128) , io.resp_vector(0) (127,64) ,io.resp_vector(0) (63,0), sel3, sel2, sel1,sel0)
      val extractedword_1 = Mux(sel3,io.resp_vector(1) (255,192), Mux(sel2, io.resp_vector(1) (191,128) , Mux(sel1,  io.resp_vector(1) (127,64) ,io.resp_vector(1) (63,0))))
-     ///printf ("[checkdata]%x  %x  1********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_1, io.resp_vector(1) (255,192), io.resp_vector(1) (191,128) , io.resp_vector(1) (127,64) ,io.resp_vector(1) (63,0), sel3, sel2, sel1,sel0)
+     /////printf ("[checkdata]%x  %x  1********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_1, io.resp_vector(1) (255,192), io.resp_vector(1) (191,128) , io.resp_vector(1) (127,64) ,io.resp_vector(1) (63,0), sel3, sel2, sel1,sel0)
      val extractedword_2 = Mux(sel3,io.resp_vector(2) (255,192), Mux(sel2, io.resp_vector(2) (191,128) , Mux(sel1,  io.resp_vector(2) (127,64) ,io.resp_vector(2) (63,0))))
-     ///printf ("[checkdata]%x  %x  2********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_2, io.resp_vector(2) (255,192), io.resp_vector(2) (191,128) , io.resp_vector(2) (127,64) ,io.resp_vector(2) (63,0), sel3, sel2, sel1,sel0)
+     /////printf ("[checkdata]%x  %x  2********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_2, io.resp_vector(2) (255,192), io.resp_vector(2) (191,128) , io.resp_vector(2) (127,64) ,io.resp_vector(2) (63,0), sel3, sel2, sel1,sel0)
      val extractedword_3 = Mux(sel3,io.resp_vector(3) (255,192), Mux(sel2, io.resp_vector(3) (191,128) , Mux(sel1,  io.resp_vector(3) (127,64) ,io.resp_vector(3) (63,0))))
-     ///printf ("[checkdata]%x %x  3********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_3, io.resp_vector(3) (255,192), io.resp_vector(3) (191,128) , io.resp_vector(3) (127,64) ,io.resp_vector(3) (63,0), sel3, sel2, sel1,sel0)
+     /////printf ("[checkdata]%x %x  3********  %x %x %x %x  sels [%b %b %b %b] \n\n",io.req.bits.addr,extractedword_3, io.resp_vector(3) (255,192), io.resp_vector(3) (191,128) , io.resp_vector(3) (127,64) ,io.resp_vector(3) (63,0), sel3, sel2, sel1,sel0)
 
   io.resp(0) := extractedword_0 
   io.resp(1) := extractedword_1
   io.resp(2) := extractedword_2
   io.resp(3) := extractedword_3
-
    }
 
   when (io.req.valid && !io.req.bits.write){
-    printf ("[checkcachecounter] addr %x io.vectorresp %x %x %x %x resp %x %x %x %x \n", io.req.bits.addr, io.resp_vector(3), io.resp_vector(2), io.resp_vector(1), io.resp_vector(0), io.resp(3), io.resp(2), io.resp(1), io.resp(0) )
+    //printf ("[checkcachecounter] addr %x io.vectorresp %x %x %x %x resp %x %x %x %x \n", io.req.bits.addr, io.resp_vector(3), io.resp_vector(2), io.resp_vector(1), io.resp_vector(0), io.resp(3), io.resp(2), io.resp(1), io.resp(0) )
 
   }
 }
@@ -179,31 +181,31 @@ class DCacheDataArray(implicit p: Parameters) extends L1HellaCacheModule()(p) {
     when (valid && io.req.bits.write) {
       val wData = wWords(i).grouped(encBits)
       array.write(addr, Vec((0 until nWays).flatMap(i => wData)), wMask)//32 byte is written into the cache for four ways simultaneously
-     /// printf ("[checkdatamain] addr %x  data %x eccmask %x\n", io.req.bits.addr, io.req.bits.wdata, io.req.bits.eccMask)
+     /// //printf ("[checkdatamain] addr %x  data %x eccmask %x\n", io.req.bits.addr, io.req.bits.wdata, io.req.bits.eccMask)
 
                               val temp_print_wData= Vec((0 until nWays).flatMap(i => wData)).grouped(32).map(_.asUInt).toSeq
-        ///                      printf ("[CacheChecksmain]%x wmain ============================================================================================================= \n",io.req.bits.addr)
-           ///                   printf ("[CacheChecksmain]%x wmain array.write.data %x \n",io.req.bits.addr, temp_print_wData(0))
-              ///                printf("[CacheChecksmain]%x wmain \n\n",io.req.bits.addr)
+        ///                      //printf ("[CacheChecksmain]%x wmain ============================================================================================================= \n",io.req.bits.addr)
+           ///                   //printf ("[CacheChecksmain]%x wmain array.write.data %x \n",io.req.bits.addr, temp_print_wData(0))
+              ///                //printf("[CacheChecksmain]%x wmain \n\n",io.req.bits.addr)
                               val readfrommem = array.read(addr, Bool(true))
                               val readfrommem_grouped = readfrommem.grouped(8).map(_.asUInt).toSeq
-                 ///             printf("[CacheChecksmain]%x wmain grouped_read_after_write %x %x %x %x \n",io.req.bits.addr, readfrommem_grouped(3),readfrommem_grouped(2),readfrommem_grouped(1),readfrommem_grouped(0))
-                    ///          printf ("[CacheChecksmain]%x wmain io.addr %x  io.eccmask [%x] io.wayen[%b][%b][%b][%b] io.wdata[%x] addr %x wwrods[%x]\n", io.req.bits.addr,io.req.bits.addr,io.req.bits.eccMask,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),io.req.bits.wdata, addr, wWords(0))
+                 ///             //printf("[CacheChecksmain]%x wmain grouped_read_after_write %x %x %x %x \n",io.req.bits.addr, readfrommem_grouped(3),readfrommem_grouped(2),readfrommem_grouped(1),readfrommem_grouped(0))
+                    ///          //printf ("[CacheChecksmain]%x wmain io.addr %x  io.eccmask [%x] io.wayen[%b][%b][%b][%b] io.wdata[%x] addr %x wwrods[%x]\n", io.req.bits.addr,io.req.bits.addr,io.req.bits.eccMask,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),io.req.bits.wdata, addr, wWords(0))
 
-///                              printf ("[CacheChecksmain]%x wmain wMask %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b \n",io.req.bits.addr, wMask(0),wMask(1),wMask(2),wMask(3),wMask(4),wMask(5),wMask(6),wMask(7), wMask(8),wMask(9),wMask(10),wMask(11),wMask(12),wMask(13),wMask(14),wMask(15),wMask(16) ,wMask(17), wMask(18),wMask(19), wMask(20),wMask(21),wMask(22),wMask(23),wMask(24),wMask(25),wMask(26),wMask(27), wMask(28),wMask(29),wMask(30), wMask(31))
-   ///                           printf ("[CacheChecksmain]%x wmain ============================================================================================================= \n",io.req.bits.addr)
+///                              //printf ("[CacheChecksmain]%x wmain wMask %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b %b \n",io.req.bits.addr, wMask(0),wMask(1),wMask(2),wMask(3),wMask(4),wMask(5),wMask(6),wMask(7), wMask(8),wMask(9),wMask(10),wMask(11),wMask(12),wMask(13),wMask(14),wMask(15),wMask(16) ,wMask(17), wMask(18),wMask(19), wMask(20),wMask(21),wMask(22),wMask(23),wMask(24),wMask(25),wMask(26),wMask(27), wMask(28),wMask(29),wMask(30), wMask(31))
+   ///                           //printf ("[CacheChecksmain]%x wmain ============================================================================================================= \n",io.req.bits.addr)
 
     }
     val data = array.read(addr, valid && !io.req.bits.write)//32B is read
 
                             when (valid && !io.req.bits.write){
                               val print_data = data.grouped(32).map(_.asUInt).toSeq
-      ///                        printf("[CacheChecksmain]%x r readdata %x  \n", io.req.bits.addr, print_data(0))
-         ///                    printf ("[CacheChecksmain]%x rmain ============================================================================================================= \n",io.req.bits.addr)
-            ///                 printf ("[CacheChecksmain]%x rmain io.addr %x io.wayen[%b][%b][%b][%b] addr %x\n",io.req.bits.addr, io.req.bits.addr,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),addr)
+      ///                        //printf("[CacheChecksmain]%x r readdata %x  \n", io.req.bits.addr, print_data(0))
+         ///                    //printf ("[CacheChecksmain]%x rmain ============================================================================================================= \n",io.req.bits.addr)
+            ///                 //printf ("[CacheChecksmain]%x rmain io.addr %x io.wayen[%b][%b][%b][%b] addr %x\n",io.req.bits.addr, io.req.bits.addr,io.req.bits.way_en(3),io.req.bits.way_en(2),io.req.bits.way_en(1),io.req.bits.way_en(0),addr)
                              val temp_read_data = data.grouped(8).map(_.asUInt).toSeq
-               ///              printf ("[CacheChecksmain]%x rmain readdata %x %x %x %x\n",io.req.bits.addr, temp_read_data(3),temp_read_data(2),temp_read_data(1),temp_read_data(0))
-                  ///           printf ("[CacheChecksmain]%x rmain ============================================================================================================= \n",io.req.bits.addr)
+               ///              //printf ("[CacheChecksmain]%x rmain readdata %x %x %x %x\n",io.req.bits.addr, temp_read_data(3),temp_read_data(2),temp_read_data(1),temp_read_data(0))
+                  ///           //printf ("[CacheChecksmain]%x rmain ============================================================================================================= \n",io.req.bits.addr)
                            }
 
 
@@ -213,13 +215,13 @@ class DCacheDataArray(implicit p: Parameters) extends L1HellaCacheModule()(p) {
   }
     (io.resp zip rdata.transpose).foreach { case (resp, data) => resp := data.asUInt }
 
- //// printf ("[CacheChecksmain]%x io.resp  0******** %x \n", io.req.bits.addr, io.resp(0))
-  ///printf ("[CacheChecksmain]%x io.resp  1******** %x \n", io.req.bits.addr, io.resp(1))
-  ///printf ("[CacheChecksmain]%x io.resp  2******** %x \n", io.req.bits.addr, io.resp(2))
-  ///printf ("[CacheChecksmain]%x io.resp  3******** %x \n", io.req.bits.addr, io.resp(3))
+ //// //printf ("[CacheChecksmain]%x io.resp  0******** %x \n", io.req.bits.addr, io.resp(0))
+  /////printf ("[CacheChecksmain]%x io.resp  1******** %x \n", io.req.bits.addr, io.resp(1))
+  /////printf ("[CacheChecksmain]%x io.resp  2******** %x \n", io.req.bits.addr, io.resp(2))
+  /////printf ("[CacheChecksmain]%x io.resp  3******** %x \n", io.req.bits.addr, io.resp(3))
 
    when (io.req.valid && !io.req.bits.write){
-    ///printf ("\n[checkdata] addr %x resp %x %x %x %x  \n\n", io.req.bits.addr, io.resp(3), io.resp(2), io.resp(1), io.resp(0) )
+    /////printf ("\n[checkdata] addr %x resp %x %x %x %x  \n\n", io.req.bits.addr, io.resp(3), io.resp(2), io.resp(1), io.resp(0) )
 
   }
 }
@@ -257,13 +259,13 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   //comment_final_dcache data.io.req <> dataArb.io.out
   //comment_final_dcache data.io.req.bits.wdata := encodeData(dataArb.io.out.bits.wdata(rowBits-1, 0))
 
-  ///printf ("[checkdata]if encoding works wdata %x  data_Arbout %x \n", data.io.req.bits.wdata,dataArb.io.out.bits.wdata(rowBits-1, 0))
+  /////printf ("[checkdata]if encoding works wdata %x  data_Arbout %x \n", data.io.req.bits.wdata,dataArb.io.out.bits.wdata(rowBits-1, 0))
 
   //zazad begins
   val data_modified2 = Module(new DCacheDataArray_modified2)
   data_modified2.io.req <> dataArb.io.out
   data_modified2.io.req.bits.wdata := encodeData(dataArb.io.out.bits.wdata(rowBits-1, 0))
-  printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@@@@in cache  data_modified2.io.req element_numebr %x addr %x \n", data_modified2.io.req.bits.addr, data_modified2.io.req.bits.element_number)
+  //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@@@@in cache  data_modified2.io.req element_numebr %x addr %x data_modified2.io.req.valid %x data_modified2.io.req.vwdata %x \n", data_modified2.io.req.bits.addr, data_modified2.io.req.bits.element_number, data_modified2.io.req.valid, data_modified2.io.req.vwdata)
   //zazad ends
 
   dataArb.io.out.ready := true
@@ -292,6 +294,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   val s1_valid_not_nacked = s1_valid && !s1_nack
   val s1_req = Reg(io.cpu.req.bits)
   val s0_clk_en = metaArb.io.out.valid && !metaArb.io.out.bits.write
+  //printf("[DCache]: s0_clk_en %x\n", s0_clk_en)
   when (s0_clk_en) {
     s1_req := io.cpu.req.bits
     s1_req.addr := Cat(metaArb.io.out.bits.addr >> blockOffBits, io.cpu.req.bits.addr(blockOffBits-1,0))
@@ -318,7 +321,9 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   val inWriteback = release_state.isOneOf(s_voluntary_writeback, s_probe_rep_dirty)
   val releaseWay = Wire(UInt())
   io.cpu.req.ready := (release_state === s_ready) && !cached_grant_wait && !s1_nack
-   //printf("[justprintinsts] \n")
+  //printf("[DCache]: release_state %x s_ready %x cached_grant_wait %x s1_nack %x\n",
+         //release_state, s_ready, cached_grant_wait, s1_nack)
+   ////printf("[justprintinsts] \n")
 
   // I/O MSHRs
   val mmioOffset = if (outer.scratch().isDefined) 0 else 1
@@ -336,16 +341,23 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   dataArb.io.in(3).bits.way_en := ~UInt(0, nWays)
   dataArb.io.in(3).bits.element_number := io.cpu.req.bits.element_number
   dataArb.io.in(3).bits.vector_cache_access_type := io.cpu.req.bits.vector_cache_access_type
-  printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache dataarb.io.in3  valid %x write %x entire addr %x element# %x access_type %x \n", dataArb.io.in(3).valid, dataArb.io.in(3).bits.write, dataArb.io.in(3).bits.addr,dataArb.io.in(3).bits.element_number, dataArb.io.in(3).bits.vector_cache_access_type)
-  printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache io.cpu.req valid %x entire addr %x el# %x access_type %x \n", io.cpu.req.valid, io.cpu.req.bits.addr, io.cpu.req.bits.element_number, io.cpu.req.bits.vector_cache_access_type)
-  when (!dataArb.io.in(3).ready && s0_read) { io.cpu.req.ready := false }
+  //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache dataarb.io.in3  valid %x write %x entire addr %x element# %x access_type %x \n", dataArb.io.in(3).valid, dataArb.io.in(3).bits.write, dataArb.io.in(3).bits.addr,dataArb.io.in(3).bits.element_number, dataArb.io.in(3).bits.vector_cache_access_type)
+  //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache io.cpu.req valid %x entire addr %x el# %x access_type %x \n", io.cpu.req.valid, io.cpu.req.bits.addr, io.cpu.req.bits.element_number, io.cpu.req.bits.vector_cache_access_type)
+  when (!dataArb.io.in(3).ready && s0_read) {
+       io.cpu.req.ready := false
+       //printf("[DCache]: dataArb.io.in(3).ready %x s0_read %x\n",
+       //        dataArb.io.in(3).ready, s0_read)
+  }
   val s1_did_read = RegEnable(dataArb.io.in(3).fire(), s0_clk_en)
   metaArb.io.in(7).valid := io.cpu.req.valid
   metaArb.io.in(7).bits.write := false
   metaArb.io.in(7).bits.addr := io.cpu.req.bits.addr
   metaArb.io.in(7).bits.way_en := ~UInt(0, nWays)
   metaArb.io.in(7).bits.data := metaArb.io.in(4).bits.data
-  when (!metaArb.io.in(7).ready) { io.cpu.req.ready := false }
+  when (!metaArb.io.in(7).ready) {
+    io.cpu.req.ready := false
+    //printf("[DCache]: metaArb.io.in(7).ready %x\n", metaArb.io.in(7).ready)       
+  }
 
   // address translation
   val tlb = Module(new TLB(false, log2Ceil(coreDataBytes), nTLBEntries))
@@ -361,12 +373,15 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   tlb.io.req.bits.vaddr := s1_req.addr
   tlb.io.req.bits.size := s1_req.typ
   tlb.io.req.bits.cmd := s1_req.cmd
-  when (!tlb.io.req.ready && !tlb.io.ptw.resp.valid && !io.cpu.req.bits.phys) { io.cpu.req.ready := false }
+  when (!tlb.io.req.ready && !tlb.io.ptw.resp.valid && !io.cpu.req.bits.phys) {
+    io.cpu.req.ready := false
+    //printf("[DCache]: tlb.io.req.ready %x tlb.io.ptw.resp.valid %x io.cpu.req.bits.phys %x\n", tlb.io.req.ready, tlb.io.ptw.resp.valid, io.cpu.req.bits.phys)
+}
   when (s1_valid && s1_readwrite && tlb.io.resp.miss) { s1_nack := true
-   // printf ("[justprintinsts] s1_nack s1_valid && s1_readwrite && tlb.io.resp.miss \n")
+   //printf ("[justprintinsts] s1_nack s1_valid && s1_readwrite && tlb.io.resp.miss \n")
   }
 
-  printf("[checkcachecounter]TLLLLLLLLllllb in cache vaddr %x passthrough %b tlb.io.req valid %b %b %x %x %x %x %b %x %x %x tlb.io.resp.miss %b tlb.io.ptw.resp.valid %b \n", s1_req.addr, s1_req.phys, tlb.io.req.valid, tlb.io.req.bits.sfence.valid,  tlb.io.req.bits.sfence.bits.rs1, tlb.io.req.bits.sfence.bits.rs2, tlb.io.req.bits.sfence.bits.asid,  tlb.io.req.bits.sfence.bits.addr, tlb.io.req.bits.passthrough, tlb.io.req.bits.vaddr, tlb.io.req.bits.size , tlb.io.req.bits.cmd, tlb.io.resp.miss, tlb.io.ptw.resp.valid )
+  //printf("[checkcachecounter]TLLLLLLLLllllb in cache vaddr %x passthrough %b tlb.io.req valid %b %b %x %x %x %x %b %x %x %x tlb.io.resp.miss %b tlb.io.ptw.resp.valid %b \n", s1_req.addr, s1_req.phys, tlb.io.req.valid, tlb.io.req.bits.sfence.valid,  tlb.io.req.bits.sfence.bits.rs1, tlb.io.req.bits.sfence.bits.rs2, tlb.io.req.bits.sfence.bits.asid,  tlb.io.req.bits.sfence.bits.addr, tlb.io.req.bits.passthrough, tlb.io.req.bits.vaddr, tlb.io.req.bits.size , tlb.io.req.bits.cmd, tlb.io.resp.miss, tlb.io.ptw.resp.valid )
 
   val s1_paddr = tlb.io.resp.paddr
   val s1_victim_way = Wire(init = replacer.way)
@@ -392,7 +407,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
       val s1_meta_hit_state = ClientMetadata.onReset.fromBits(
         s1_meta_uncorrected.map(r => Mux(r.tag === s1_tag && !s1_flush_valid, r.coh.asUInt, UInt(0)))
           .reduce (_|_))
-      //printf("[checkcachecounter] metareqaddr %x metaIdx %x s1_meta [%x %x %x %x] s1_tag %x s1hitway %x coh %b %b %b %b tags %x %x %x %x \n", metaReq.bits.addr,  metaReq.bits.addr(idxMSB, idxLSB), s1_meta(0),s1_meta(1),s1_meta(2),s1_meta(3),s1_tag, s1_meta_hit_way,s1_meta_uncorrected(0).coh.isValid(),s1_meta_uncorrected(1).coh.isValid(),s1_meta_uncorrected(2).coh.isValid(),s1_meta_uncorrected(3).coh.isValid(), s1_meta_uncorrected(0).tag,s1_meta_uncorrected(1).tag,s1_meta_uncorrected(2).tag,s1_meta_uncorrected(3).tag)
+      ////printf("[checkcachecounter] metareqaddr %x metaIdx %x s1_meta [%x %x %x %x] s1_tag %x s1hitway %x coh %b %b %b %b tags %x %x %x %x \n", metaReq.bits.addr,  metaReq.bits.addr(idxMSB, idxLSB), s1_meta(0),s1_meta(1),s1_meta(2),s1_meta(3),s1_tag, s1_meta_hit_way,s1_meta_uncorrected(0).coh.isValid(),s1_meta_uncorrected(1).coh.isValid(),s1_meta_uncorrected(2).coh.isValid(),s1_meta_uncorrected(3).coh.isValid(), s1_meta_uncorrected(0).tag,s1_meta_uncorrected(1).tag,s1_meta_uncorrected(2).tag,s1_meta_uncorrected(3).tag)
 
       (s1_meta_hit_way, s1_meta_hit_state, s1_meta, s1_meta_uncorrected(s1_victim_way))
     }
@@ -400,13 +415,13 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   //comment_final_dcache val s1_all_data_ways = Vec(data.io.resp :+ dummyEncodeData(tl_out.d.bits.data))
   
   
-  ///printf ("[checkdata] %x s1_data_way %x releaseway %x s1_hit_way %x inwriteback %b \n", s1_req.addr(11,0), s1_data_way, releaseWay, s1_hit_way, inWriteback)
+  /////printf ("[checkdata] %x s1_data_way %x releaseway %x s1_hit_way %x inwriteback %b \n", s1_req.addr(11,0), s1_data_way, releaseWay, s1_hit_way, inWriteback)
 
   //val modified2_s1_all_data_ways = Vec(data_modified2.io.resp :+ dummyEncodeData(tl_out.d.bits.data))
 
  /* when (s1_read && s1_valid){
-    printf("[CacheChecksmodified]%x s1_all_data_ways %x %x %x %x\n",io.cpu.req.bits.addr(11,0), data_modified2.io.resp(3),data_modified2.io.resp(2),data_modified2.io.resp(1),data_modified2.io.resp(0))
-    printf("[CacheChecksmain]%x s1_all_data_ways  %x %x %x %x \n",io.cpu.req.bits.addr(11,0), data.io.resp(3),data.io.resp(2),data.io.resp(1),data.io.resp(0))
+    //printf("[CacheChecksmodified]%x s1_all_data_ways %x %x %x %x\n",io.cpu.req.bits.addr(11,0), data_modified2.io.resp(3),data_modified2.io.resp(2),data_modified2.io.resp(1),data_modified2.io.resp(0))
+    //printf("[CacheChecksmain]%x s1_all_data_ways  %x %x %x %x \n",io.cpu.req.bits.addr(11,0), data.io.resp(3),data.io.resp(2),data.io.resp(1),data.io.resp(0))
   }
   */
 
@@ -421,13 +436,13 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     val sel3 = (wordinHL === UInt(0x3))
 
      val extractedword_0 = Mux(sel3,data_modified2.io.resp_vector(0) (255,192), Mux(sel2, data_modified2.io.resp_vector(0) (191,128) , Mux(sel1, data_modified2.io.resp_vector(0) (127,64) ,data_modified2.io.resp_vector(0) (63,0))))
-     printf ("[checkcachecounter] %x  %x  0********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_0, data_modified2.io.resp_vector(0) (255,192), data_modified2.io.resp_vector(0) (191,128) , data_modified2.io.resp_vector(0) (127,64) ,data_modified2.io.resp_vector(0) (63,0), sel3, sel2, sel1,sel0)
+     //printf ("[checkcachecounter] %x  %x  0********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_0, data_modified2.io.resp_vector(0) (255,192), data_modified2.io.resp_vector(0) (191,128) , data_modified2.io.resp_vector(0) (127,64) ,data_modified2.io.resp_vector(0) (63,0), sel3, sel2, sel1,sel0)
      val extractedword_1 = Mux(sel3,data_modified2.io.resp_vector(1) (255,192), Mux(sel2, data_modified2.io.resp_vector(1) (191,128) , Mux(sel1,  data_modified2.io.resp_vector(1) (127,64) ,data_modified2.io.resp_vector(1) (63,0))))
-     printf ("[checkcachecounter]%x  %x  1********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_1, data_modified2.io.resp_vector(1) (255,192), data_modified2.io.resp_vector(1) (191,128) , data_modified2.io.resp_vector(1) (127,64) ,data_modified2.io.resp_vector(1) (63,0), sel3, sel2, sel1,sel0)
+     //printf ("[checkcachecounter]%x  %x  1********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_1, data_modified2.io.resp_vector(1) (255,192), data_modified2.io.resp_vector(1) (191,128) , data_modified2.io.resp_vector(1) (127,64) ,data_modified2.io.resp_vector(1) (63,0), sel3, sel2, sel1,sel0)
      val extractedword_2 = Mux(sel3,data_modified2.io.resp_vector(2) (255,192), Mux(sel2, data_modified2.io.resp_vector(2) (191,128) , Mux(sel1,  data_modified2.io.resp_vector(2) (127,64) ,data_modified2.io.resp_vector(2) (63,0))))
-     printf ("[checkcachecounter]%x  %x  2********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_2, data_modified2.io.resp_vector(2) (255,192), data_modified2.io.resp_vector(2) (191,128) , data_modified2.io.resp_vector(2) (127,64) ,data_modified2.io.resp_vector(2) (63,0), sel3, sel2, sel1,sel0)
+     //printf ("[checkcachecounter]%x  %x  2********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_2, data_modified2.io.resp_vector(2) (255,192), data_modified2.io.resp_vector(2) (191,128) , data_modified2.io.resp_vector(2) (127,64) ,data_modified2.io.resp_vector(2) (63,0), sel3, sel2, sel1,sel0)
      val extractedword_3 = Mux(sel3,data_modified2.io.resp_vector(3) (255,192), Mux(sel2, data_modified2.io.resp_vector(3) (191,128) , Mux(sel1,  data_modified2.io.resp_vector(3) (127,64) ,data_modified2.io.resp_vector(3) (63,0))))
-     printf ("[checkcachecounter]%x %x  3********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_3, data_modified2.io.resp_vector(3) (255,192), data_modified2.io.resp_vector(3) (191,128) , data_modified2.io.resp_vector(3) (127,64) ,data_modified2.io.resp_vector(3) (63,0), sel3, sel2, sel1,sel0)
+     //printf ("[checkcachecounter]%x %x  3********  %x %x %x %x  sels [%b %b %b %b] \n\n",s1_req.addr(11,0),extractedword_3, data_modified2.io.resp_vector(3) (255,192), data_modified2.io.resp_vector(3) (191,128) , data_modified2.io.resp_vector(3) (127,64) ,data_modified2.io.resp_vector(3) (63,0), sel3, sel2, sel1,sel0)
 
    val io_resp_0 = extractedword_0 
    val io_resp_1 = extractedword_1
@@ -444,15 +459,15 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
 
   when (s1_valid){
 
-    ///printf ("\n\n[checkdatamain] [tlout %x %x %x %x %x] <== [%x %x %x %x] %b %b \n\n",s1_all_data_ways(4),s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0),data.io.resp(3), data.io.resp(2), data.io.resp(1), data.io.resp(0), s1_read, s1_valid )
+    /////printf ("\n\n[checkdatamain] [tlout %x %x %x %x %x] <== [%x %x %x %x] %b %b \n\n",s1_all_data_ways(4),s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0),data.io.resp(3), data.io.resp(2), data.io.resp(1), data.io.resp(0), s1_read, s1_valid )
 
-    ///printf ("\n\n[checkdatamod] [tlout %x %x %x %x %x] <== [%x %x %x %x] %b %b \n\n",modified2_s1_all_data_ways(4),modified2_s1_all_data_ways(3), modified2_s1_all_data_ways(2), modified2_s1_all_data_ways(1), modified2_s1_all_data_ways(0),data_modified2.io.resp(3), data_modified2.io.resp(2), data_modified2.io.resp(1), data_modified2.io.resp(0), s1_read, s1_valid )
+    /////printf ("\n\n[checkdatamod] [tlout %x %x %x %x %x] <== [%x %x %x %x] %b %b \n\n",modified2_s1_all_data_ways(4),modified2_s1_all_data_ways(3), modified2_s1_all_data_ways(2), modified2_s1_all_data_ways(1), modified2_s1_all_data_ways(0),data_modified2.io.resp(3), data_modified2.io.resp(2), data_modified2.io.resp(1), data_modified2.io.resp(0), s1_read, s1_valid )
 
-    ///printf ("[checkdatamod]%x resp.vector %x %x %x %x   \n\n",s1_req.addr(11,0), data_modified2.io.resp_vector(3), data_modified2.io.resp_vector(2), data_modified2.io.resp_vector(1), data_modified2.io.resp_vector(0))
+    /////printf ("[checkdatamod]%x resp.vector %x %x %x %x   \n\n",s1_req.addr(11,0), data_modified2.io.resp_vector(3), data_modified2.io.resp_vector(2), data_modified2.io.resp_vector(1), data_modified2.io.resp_vector(0))
   }
   
   val s1_mask = Mux(s1_req.cmd === M_PWR, io.cpu.s1_data.mask, new StoreGen(s1_req.typ, s1_req.addr, UInt(0), wordBytes).mask)
-  printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@@@incache s1_mask %x io.cpu.s1_data.mask %x s1_req.typ %x s1_req.addr %x wordByte %x\n", s1_mask, io.cpu.s1_data.mask, s1_req.typ, s1_req.addr, wordBytes)
+  //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@@@incache s1_mask %x io.cpu.s1_data.mask %x s1_req.typ %x s1_req.addr %x wordByte %x\n", s1_mask, io.cpu.s1_data.mask, s1_req.typ, s1_req.addr, wordBytes)
   val s2_valid_pre_xcpt = Reg(next=s1_valid_masked && !s1_sfence, init=Bool(false))
   val s2_valid = s2_valid_pre_xcpt && !io.cpu.s2_xcpt.asUInt.orR
   val s2_probe = Reg(next=s1_probe, init=Bool(false))
@@ -490,12 +505,12 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   val s2_data = {
     val en = s1_valid || inWriteback || tl_out.d.fire()
     when (en){
-       // printf("[checkdata]s1_all_data_way  way %d addr%x  %x  %x  %x  %x %x\n",s1_data_way, s1_req.addr(11,0), s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0), s1_all_data_ways(4))
+       // //printf("[checkdata]s1_all_data_way  way %d addr%x  %x  %x  %x  %x %x\n",s1_data_way, s1_req.addr(11,0), s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0), s1_all_data_ways(4))
 
-     //  printf("[hateit]s1_all_data_way  way %d addr%x  %x  %x  %x  %x %x\n",s1_data_way, s1_req.addr(11,0), s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0), s1_all_data_ways(4))
+     //  //printf("[hateit]s1_all_data_way  way %d addr%x  %x  %x  %x  %x %x\n",s1_data_way, s1_req.addr(11,0), s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0), s1_all_data_ways(4))
 
-        ///printf("[CacheChecksmain]%x rmain s1_hit/data_way %x\n",s1_req.addr(11,0), s1_data_way)
-        ///printf("[CacheChecksmain]%x rmain s1_hit/s1_all_data_way %x  %x  %x  %x\n",s1_req.addr(11,0), s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0))
+        /////printf("[CacheChecksmain]%x rmain s1_hit/data_way %x\n",s1_req.addr(11,0), s1_data_way)
+        /////printf("[CacheChecksmain]%x rmain s1_hit/s1_all_data_way %x  %x  %x  %x\n",s1_req.addr(11,0), s1_all_data_ways(3), s1_all_data_ways(2), s1_all_data_ways(1), s1_all_data_ways(0))
     }
     if (cacheParams.pipelineWayMux && nWays > 1) {
       val s2_data_way = RegEnable(s1_data_way, en) 
@@ -508,15 +523,15 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
 
   val help_to_print_s2_data_way = RegEnable(s1_data_way, s1_valid || inWriteback || tl_out.d.fire())
  //comment_final_dcache  val help_to_print_s2_all_data_ways = (0 to nWays).map(i => RegEnable(s1_all_data_ways(i), ( s1_valid || inWriteback || tl_out.d.fire()) && s1_data_way(i)))
-  ///printf("[checkdata]s2 en %b way [s1 s2][%d  %d] addr%x  %x  %x  %x  %x %x\n",s1_valid || inWriteback || tl_out.d.fire(),s1_data_way, help_to_print_s2_data_way, s2_req.addr(11,0), help_to_print_s2_all_data_ways(3), help_to_print_s2_all_data_ways(2), help_to_print_s2_all_data_ways(1), help_to_print_s2_all_data_ways(0), help_to_print_s2_all_data_ways(4))
+  /////printf("[checkdata]s2 en %b way [s1 s2][%d  %d] addr%x  %x  %x  %x  %x %x\n",s1_valid || inWriteback || tl_out.d.fire(),s1_data_way, help_to_print_s2_data_way, s2_req.addr(11,0), help_to_print_s2_all_data_ways(3), help_to_print_s2_all_data_ways(2), help_to_print_s2_all_data_ways(1), help_to_print_s2_all_data_ways(0), help_to_print_s2_all_data_ways(4))
 
   //zazad begins
   val modified2_s2_data = {
     val en = s1_valid || inWriteback || tl_out.d.fire()
     when (en){
-     ///   printf("[checkdata]mods1addr%x way %d  %x  %x  %x  %x %x \n",s1_req.addr(11,0),s1_data_way, modified2_s1_all_data_ways(3), modified2_s1_all_data_ways(2), modified2_s1_all_data_ways(1), modified2_s1_all_data_ways(0), modified2_s1_all_data_ways(4))
-      ///  printf("[CacheChecksmodified]%x modified s1_hit/s1_data_way %x\n",s1_req.addr(11,0), s1_data_way)
-       /// printf("[CacheChecksmodified]%x modified s1_hit/s1_all_data_way %x  %x  %x  %x\n",s1_req.addr(11,0), modified2_s1_all_data_ways(3), modified2_s1_all_data_ways(2), modified2_s1_all_data_ways(1), modified2_s1_all_data_ways(0))
+     ///   //printf("[checkdata]mods1addr%x way %d  %x  %x  %x  %x %x \n",s1_req.addr(11,0),s1_data_way, modified2_s1_all_data_ways(3), modified2_s1_all_data_ways(2), modified2_s1_all_data_ways(1), modified2_s1_all_data_ways(0), modified2_s1_all_data_ways(4))
+      ///  //printf("[CacheChecksmodified]%x modified s1_hit/s1_data_way %x\n",s1_req.addr(11,0), s1_data_way)
+       /// //printf("[CacheChecksmodified]%x modified s1_hit/s1_all_data_way %x  %x  %x  %x\n",s1_req.addr(11,0), modified2_s1_all_data_ways(3), modified2_s1_all_data_ways(2), modified2_s1_all_data_ways(1), modified2_s1_all_data_ways(0))
       }
     if (cacheParams.pipelineWayMux && nWays > 1) {
       val s2_data_way = RegEnable(s1_data_way, en)
@@ -541,10 +556,10 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
 
   val help_to_print_modified2_s2_all_data_ways = (0 to nWays).map(i => RegEnable(modified2_s1_all_data_ways(i), ( s1_valid || inWriteback || tl_out.d.fire()) && s1_data_way(i)))
 
-  printf("[checkcachecounter]s2 en %b way [s1 s2][%d  %d] addr%x  %x  %x  %x  %x %x\n",s1_valid || inWriteback || tl_out.d.fire(),s1_data_way, help_to_print_s2_data_way, s2_req.addr(11,0), help_to_print_modified2_s2_all_data_ways(3), help_to_print_modified2_s2_all_data_ways(2), help_to_print_modified2_s2_all_data_ways(1), help_to_print_modified2_s2_all_data_ways(0), help_to_print_modified2_s2_all_data_ways(4))
+  //printf("[checkcachecounter]s2 en %b way [s1 s2][%d  %d] addr%x  %x  %x  %x  %x %x\n",s1_valid || inWriteback || tl_out.d.fire(),s1_data_way, help_to_print_s2_data_way, s2_req.addr(11,0), help_to_print_modified2_s2_all_data_ways(3), help_to_print_modified2_s2_all_data_ways(2), help_to_print_modified2_s2_all_data_ways(1), help_to_print_modified2_s2_all_data_ways(0), help_to_print_modified2_s2_all_data_ways(4))
 
- // printf ("[checkdata] s1/s2 data_way  %d %d \n", s1_data_way, help_to_print_s2_data_way)
-  //printf ("[hateit] s1/s2 data_way  %d %d \n", s1_data_way, help_to_print_s2_data_way)
+ // //printf ("[checkdata] s1/s2 data_way  %d %d \n", s1_data_way, help_to_print_s2_data_way)
+  ////printf ("[hateit] s1/s2 data_way  %d %d \n", s1_data_way, help_to_print_s2_data_way)
 
   //zazad ends
 
@@ -577,13 +592,13 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   val modified2_s2_data_uncorrected = (modified2_s2_data_decoded.map(_.uncorrected): Seq[UInt]).asUInt
   val modified2_s2_valid_data_error = s2_valid_hit_pre_data_ecc && modified2_s2_data_error && can_acquire_before_release
   when(s2_read){
-  ///  printf("[CacheChecksmain]%x s2_read-true s2_data %x \n",s2_req.addr (11,0), s2_data)
-       printf("[checkcachecounter]**************%x s2_read modified2_s2_data %x modified2_s2_data_decoded %x\n",s2_req.addr (11,0), modified2_s2_data, modified2_s2_data_uncorrected)
+  ///  //printf("[CacheChecksmain]%x s2_read-true s2_data %x \n",s2_req.addr (11,0), s2_data)
+       //printf("[checkcachecounter]**************%x s2_read modified2_s2_data %x modified2_s2_data_decoded %x\n",s2_req.addr (11,0), modified2_s2_data, modified2_s2_data_uncorrected)
   }
 
 
   //zazad ends
- /// printf ("[checkcoding] %x %x %x \n", s2_data_uncorrected, s2_data,s2_data_corrected)
+ /// //printf ("[checkcoding] %x %x %x \n", s2_data_uncorrected, s2_data,s2_data_corrected)
   val s2_valid_hit = s2_valid_hit_pre_data_ecc  && !modified2_s2_data_error && (!s2_waw_hazard || s2_store_merge)
   val s2_valid_miss = s2_valid_masked && s2_readwrite  && !s2_meta_error  && !s2_hit && can_acquire_before_release
   val s2_valid_cached_miss = s2_valid_miss && !s2_uncached && !uncachedInFlight.asUInt.orR
@@ -621,7 +636,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
 
   //zaza begins
  // io.cpu.s2_nack := s2_valid && !s2_valid_hit && !(s2_valid_uncached_pending && tl_out_a.ready)
-  //////////////////printf("[checkcachecounter]addr io.cpu.req %x s1_req %x s1_type [%d]  s2_req %x hit_way s1 %d s2 %d s2validhit %b s2_hit %b s2_nack %b  s1_valid_not_nacked %b s1_valid %b !s1_nack %b [s2_valid_hit %b %b %b] [s2_valid_hit_pre_data_ecc %b %b %b %b %b] s2_valid %b [%b [%b [%b %b]  %b] %b] \n", io.cpu.req.bits.addr, s1_req.addr,s1_req.typ, s2_req.addr, s1_hit_way,s2_hit_way, s2_valid_hit,s2_hit, io.cpu.s2_nack, s1_valid_not_nacked,s1_valid ,!s1_nack, s2_valid_hit_pre_data_ecc, !s2_data_error , (!s2_waw_hazard || s2_store_merge), s2_valid_hit_pre_data_ecc, s2_valid_masked, s2_readwrite, !s2_meta_error, s2_hit, s2_valid,s2_valid_pre_xcpt,s1_valid_masked, s1_valid , !io.cpu.s1_kill, !s1_sfence,!io.cpu.s2_xcpt.asUInt.orR)
+  ////////////////////printf("[checkcachecounter]addr io.cpu.req %x s1_req %x s1_type [%d]  s2_req %x hit_way s1 %d s2 %d s2validhit %b s2_hit %b s2_nack %b  s1_valid_not_nacked %b s1_valid %b !s1_nack %b [s2_valid_hit %b %b %b] [s2_valid_hit_pre_data_ecc %b %b %b %b %b] s2_valid %b [%b [%b [%b %b]  %b] %b] \n", io.cpu.req.bits.addr, s1_req.addr,s1_req.typ, s2_req.addr, s1_hit_way,s2_hit_way, s2_valid_hit,s2_hit, io.cpu.s2_nack, s1_valid_not_nacked,s1_valid ,!s1_nack, s2_valid_hit_pre_data_ecc, !s2_data_error , (!s2_waw_hazard || s2_store_merge), s2_valid_hit_pre_data_ecc, s2_valid_masked, s2_readwrite, !s2_meta_error, s2_hit, s2_valid,s2_valid_pre_xcpt,s1_valid_masked, s1_valid , !io.cpu.s1_kill, !s1_sfence,!io.cpu.s2_xcpt.asUInt.orR)
   //zazad ends
 
   // load reservations and TL error reporting
@@ -658,11 +673,12 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
 
   //zazad begins
   val pstore1_isvec = RegEnable(s1_req.isvector, s1_valid_not_nacked && s1_write)
+  val pstore1_vec_scalar = RegEnable(s1_req.vec_scalar, s1_valid_not_nacked && s1_write)
   val pstore1_vector_cache_access_type = RegEnable(s1_req.vector_cache_access_type, s1_valid_not_nacked && s1_write)
   val pstore1_cnt_cache_vsd = RegEnable(s1_req.cnt_cache_vsd, s1_valid_not_nacked && s1_write)
   val vector_pstore1_data = RegEnable(io.cpu.DcacheCpu_s1_data.data, s1_valid_not_nacked && s1_write)
   when (pstore1_isvec){
-    ///printf("[trackloadsnew] vector_pstore1_data %x  isvec %b addr %x\n", vector_pstore1_data, pstore1_isvec, pstore1_addr(11, 0))
+    /////printf("[trackloadsnew] vector_pstore1_data %x  isvec %b addr %x\n", vector_pstore1_data, pstore1_isvec, pstore1_addr(11, 0))
   }
     //zazad ends
   val pstore1_way = RegEnable(s1_hit_way, s1_valid_not_nacked && s1_write)
@@ -708,6 +724,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   }.asUInt
 
   val pstore2_isvec =RegEnable(pstore1_isvec, advance_pstore1)
+  val pstore2_vec_scalar = RegEnable (pstore1_vec_scalar, advance_pstore1)
   val pstore2_vector_cache_access_type = RegEnable (pstore1_vector_cache_access_type, advance_pstore1)
   val pstore2_cnt_cache_vsd = RegEnable (pstore1_cnt_cache_vsd, advance_pstore1)
   //zazad ends
@@ -722,7 +739,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
 
   when (pstore2_isvec){
 
-    ///printf("[trackloadsnew] %x %b %x\n", pstore1_addr, pstore1_isvec, pstore2_storegen_data)
+    /////printf("[trackloadsnew] %x %b %x\n", pstore1_addr, pstore1_isvec, pstore2_storegen_data)
   }
     s2_store_merge := (if (eccBytes == 1) false.B else {
     ccover(pstore1_merge, "STORE_MERGED", "D$ store merged")
@@ -735,7 +752,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   })
 
 
-  //printf("[checkcachecounter] correct[%b %b] s2_store-valid %b[s2validhit %b s2write %b] pstore1addr %x [s1paddr %x validnotbackedandwrite %b] data[%x] pstore1merge %b[%b %b] any_pstore_valid %b[%b %b] [structural %b opportunastic %b] pstore_drain_on_miss %b [releaseinflight %b s2valid %b s2validhit %b !s2uncachedpending %b] [drain %b held/valid %b] advance_pstore_1 %b [%b %b %b %b] pstore2_addr %x s2data %x\n", s2_correct, s2_valid_correct,s2_store_valid, s2_valid_hit, s2_write, pstore1_addr, s1_paddr, s1_valid_not_nacked && s1_write, vector_pstore1_data, pstore1_merge, s2_store_valid, s2_store_merge, any_pstore_valid, pstore1_valid, pstore2_valid, pstore_drain_structural,pstore_drain_opportunistic,pstore_drain_on_miss,releaseInFlight,s2_valid ,s2_valid_hit,!s2_valid_uncached_pending,pstore_drain, pstore1_valid, advance_pstore1,pstore1_valid ,s2_valid_correct,pstore2_valid,pstore_drain, pstore2_addr, vector_pstore2_storegen_data)
+  ////printf("[checkcachecounter] correct[%b %b] s2_store-valid %b[s2validhit %b s2write %b] pstore1addr %x [s1paddr %x validnotbackedandwrite %b] data[%x] pstore1merge %b[%b %b] any_pstore_valid %b[%b %b] [structural %b opportunastic %b] pstore_drain_on_miss %b [releaseinflight %b s2valid %b s2validhit %b !s2uncachedpending %b] [drain %b held/valid %b] advance_pstore_1 %b [%b %b %b %b] pstore2_addr %x s2data %x\n", s2_correct, s2_valid_correct,s2_store_valid, s2_valid_hit, s2_write, pstore1_addr, s1_paddr, s1_valid_not_nacked && s1_write, vector_pstore1_data, pstore1_merge, s2_store_valid, s2_store_merge, any_pstore_valid, pstore1_valid, pstore2_valid, pstore_drain_structural,pstore_drain_opportunistic,pstore_drain_on_miss,releaseInFlight,s2_valid ,s2_valid_hit,!s2_valid_uncached_pending,pstore_drain, pstore1_valid, advance_pstore1,pstore1_valid ,s2_valid_correct,pstore2_valid,pstore_drain, pstore2_addr, vector_pstore2_storegen_data)
 
   dataArb.io.in(0).valid := pstore_drain
   dataArb.io.in(0).bits.write := true
@@ -745,14 +762,15 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   //zazad begins
   dataArb.io.in(0).bits.vwdata := Fill(rowWords, Mux(pstore2_valid, vector_pstore2_storegen_data,vector_pstore1_data))
   dataArb.io.in(0).bits.isvec  := Mux(pstore2_valid, pstore2_isvec, pstore1_isvec)
+  dataArb.io.in(0).bits.vec_scalar := Mux(pstore2_valid, pstore2_vec_scalar, pstore1_vec_scalar)
   dataArb.io.in(0).bits.vector_cache_access_type  := Mux(pstore2_valid, pstore2_vector_cache_access_type, pstore1_vector_cache_access_type)
   dataArb.io.in(0).bits.cnt_cache_vsd  := Mux(pstore2_valid, pstore2_cnt_cache_vsd, pstore1_cnt_cache_vsd)
   dataArb.io.in(0).bits.element_number := io.cpu.req.bits.element_number
 
-    printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache dataarb.io.in0 for write  valid %x write %x addr %x element# %x access_type %x \n", dataArb.io.in(0).valid, dataArb.io.in(0).bits.write, dataArb.io.in(0).bits.addr,dataArb.io.in(0).bits.element_number, dataArb.io.in(0).bits.vector_cache_access_type)
+   printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache dataarb.io.in0 for write  valid %x write %x addr %x element# %x access_type %x dataArb.io.in(0).bits.vwdata %x pstore2_valid %x vector_pstore2_storegen_data %x vector_pstore1_data %x\n", dataArb.io.in(0).valid, dataArb.io.in(0).bits.write, dataArb.io.in(0).bits.addr,dataArb.io.in(0).bits.element_number, dataArb.io.in(0).bits.vector_cache_access_type, dataArb.io.in(0).bits.vwdata, pstore2_valid, vector_pstore2_storegen_data, vector_pstore1_data)
 
   when (pstore2_isvec){
-    ////printf("[trackloadsnew] pstore2==>dataarray  vwdata %x  isvec %b  \n", dataArb.io.in(0).bits.vwdata,dataArb.io.in(0).bits.isvec)
+    printf("[trackloadsnew] pstore2==>dataarray  vwdata %x  isvec %b  \n", dataArb.io.in(0).bits.vwdata,dataArb.io.in(0).bits.isvec)
   }
   //zazad ends
   dataArb.io.in(0).bits.wordMask := UIntToOH(Mux(pstore2_valid, pstore2_addr, pstore1_addr).extract(rowOffBits-1,offsetlsb))
@@ -771,7 +789,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     s1_write && (s1_hazard || needsRead(s1_req) && !s1_did_read)
   })
   when (s1_valid && s1_raw_hazard) { s1_nack := true
-   // printf ("[justprintinsts] s1_nack in s1_valid && s1_raw_hazard \n")
+   //printf ("[justprintinsts] s1_nack in s1_valid && s1_raw_hazard \n")
   }
 
   // Prepare a TileLink request message that initiates a transaction
@@ -898,7 +916,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   dataArb.io.in(1).bits.eccMask := ~UInt(0, wordBytes / eccBytes)
 
   when (tl_out.d.valid && grantIsRefill && canAcceptCachedGrant){
-    ///printf("[TCSAddr]%x  tl wdata %x \n", s2_req_block_addr | d_address_inc(11,0),tl_out.d.bits.data)
+    /////printf("[TCSAddr]%x  tl wdata %x \n", s2_req_block_addr | d_address_inc(11,0),tl_out.d.bits.data)
   }
 
   // tag updates on refill
@@ -918,12 +936,15 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     tl_out.d.ready := false
     // ...but insert bubble to guarantee grant's eventual forward progress
     when (tl_out.d.valid) {
+      //printf("[DCache]: tl_out.d.valid %x\n", tl_out.d.valid)
       io.cpu.req.ready := false
       dataArb.io.in(1).valid := true
       dataArb.io.in(1).bits.write := false
       blockUncachedGrant := !dataArb.io.in(1).ready
     }
   }
+  //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache dataarb.io.in1 valid %x write %x addr %x element# %x access_type %x \n", dataArb.io.in(1).valid, dataArb.io.in(1).bits.write, dataArb.io.in(1).bits.addr,dataArb.io.in(1).bits.element_number, dataArb.io.in(1).bits.vector_cache_access_type)
+
   ccover(tl_out.d.valid && !tl_out.d.ready, "BLOCK_D", "D$ D-channel blocked")
 
   // Handle an incoming TileLink Probe message
@@ -947,7 +968,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   //zazad begins not required can be deleted just for error reports
   val modified2_writeback_data_error = modified2_s2_data_decoded.map(_.error).reduce(_||_)
   val modified2_writeback_data_uncorrectable = modified2_s2_data_decoded.map(_.uncorrectable).reduce(_||_)
-//  printf("%x %x [%x %x] %x %x[%x %x] %x[%x] \n", modified2_writeback_data_error, modified2_writeback_data_uncorrectable, writeback_data_error, writeback_data_uncorrectable,modified2_s2_data_corrected, modified2_s2_data_uncorrected,s2_data_corrected, s2_data_uncorrected, modified2_s2_correct, s2_correct)
+//  //printf("%x %x [%x %x] %x %x[%x %x] %x[%x] \n", modified2_writeback_data_error, modified2_writeback_data_uncorrectable, writeback_data_error, writeback_data_uncorrectable,modified2_s2_data_corrected, modified2_s2_data_uncorrected,s2_data_corrected, s2_data_uncorrected, modified2_s2_correct, s2_correct)
   //zazad ends
   val nackResponseMessage = edge.ProbeAck(b = probe_bits, reportPermissions = TLPermissions.NtoN)
   val cleanReleaseMessage = edge.ProbeAck(b = probe_bits, reportPermissions = s2_report_param)
@@ -980,7 +1001,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
         release_state := Mux(releaseDone, s_ready, s_probe_rep_miss)
       }
       when (probeNack) { s1_nack := true
-        // printf("[justprintinsts] s1_nack  probeNack \n")
+        //printf("[justprintinsts] s1_nack  probeNack \n")
       }
     }
     when (release_state === s_probe_retry) {
@@ -1024,7 +1045,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     //val select3 = ((c_count === UInt(3)) || (c_count === UInt(7)))
     val extracted_part_modified_data =Mux( select0, modified2_s2_data_vector(63,0), Mux(select1, modified2_s2_data_vector(127,64), Mux(select2 , modified2_s2_data_vector(191,128), modified2_s2_data_vector(255,192))))
 
-          //printf("[testcacheagain] inwriteback %b s1_probe %b s2_probe %b tl_data %x data %x part_vec_data %x vector_data %x c[first %d last %d cout %d releasedatabeat %d ] done %b tl.fire %b addr %x [%x  %x]\n",inWriteback, s1_probe, s2_probe, tl_out_c.bits.data, s2_data_corrected,extracted_part_modified_data ,modified2_s2_data_corrected, c_first, c_last, c_count,releaseDataBeat,  releaseDone, tl_out_c.fire(), tl_out_c.bits.address | (releaseDataBeat(log2Up(refillCycles)-1,0) << rowOffBits), tl_out_c.bits.address , (releaseDataBeat(log2Up(refillCycles)-1,0) << rowOffBits))
+          ////printf("[testcacheagain] inwriteback %b s1_probe %b s2_probe %b tl_data %x data %x part_vec_data %x vector_data %x c[first %d last %d cout %d releasedatabeat %d ] done %b tl.fire %b addr %x [%x  %x]\n",inWriteback, s1_probe, s2_probe, tl_out_c.bits.data, s2_data_corrected,extracted_part_modified_data ,modified2_s2_data_corrected, c_first, c_last, c_count,releaseDataBeat,  releaseDone, tl_out_c.fire(), tl_out_c.bits.address | (releaseDataBeat(log2Up(refillCycles)-1,0) << rowOffBits), tl_out_c.bits.address , (releaseDataBeat(log2Up(refillCycles)-1,0) << rowOffBits))
     
     //tl_out_c.bits.data := s2_data_corrected
     tl_out_c.bits.data := extracted_part_modified_data
@@ -1059,7 +1080,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   io.cpu.ordered := !(s1_valid || s2_valid || cached_grant_wait || uncachedInFlight.asUInt.orR)
 
 
-  //printf("[checkcachecounter] %b %b %b %b %d %d %d %d\n", s1_vector_cache_access_type, s2_vector_cache_access_type, pstore1_vector_cache_access_type, pstore2_vector_cache_access_type, s1_cnt_cache_vsd,s2_cnt_cache_vsd, pstore1_cnt_cache_vsd, pstore2_cnt_cache_vsd)
+  ////printf("[checkcachecounter] %b %b %b %b %d %d %d %d\n", s1_vector_cache_access_type, s2_vector_cache_access_type, pstore1_vector_cache_access_type, pstore2_vector_cache_access_type, s1_cnt_cache_vsd,s2_cnt_cache_vsd, pstore1_cnt_cache_vsd, pstore2_cnt_cache_vsd)
   val s1_xcpt_valid = tlb.io.req.valid && !s1_nack
   val s1_xcpt = tlb.io.resp
   io.cpu.s2_xcpt := Mux(RegNext(s1_xcpt_valid), RegEnable(s1_xcpt, s1_valid_not_nacked), 0.U.asTypeOf(s1_xcpt))
@@ -1070,7 +1091,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     when (s2_read) { io.cpu.s2_xcpt.ae.ld := true }
   }
 
-  printf("[checkcachecounter]TLLLLLLLLLLLLB tlb.io.req.valid %b s1_nack %b s1_xcpt_valid %b tlb.io.resp [ %b %x pf[ %b %b %b] ae[%b %b %b] ma[%b %b %b] %b %b] s1_valid_not_nacked %b \n", tlb.io.req.valid, s1_nack, s1_xcpt_valid, tlb.io.resp.miss,tlb.io.resp.paddr, tlb.io.resp.pf.ld, tlb.io.resp.pf.st, tlb.io.resp.pf.inst, tlb.io.resp.ae.ld, tlb.io.resp.ae.st, tlb.io.resp.ae.inst, tlb.io.resp.ma.ld, tlb.io.resp.ma.st, tlb.io.resp.ma.inst,  tlb.io.resp.cacheable, tlb.io.resp.prefetchable, s1_valid_not_nacked)
+  //printf("[checkcachecounter]TLLLLLLLLLLLLB tlb.io.req.valid %b s1_nack %b s1_xcpt_valid %b tlb.io.resp [ %b %x pf[ %b %b %b] ae[%b %b %b] ma[%b %b %b] %b %b] s1_valid_not_nacked %b \n s1_valid %x io.cpu.s1_kill %x s1_readwrite %x s1_sfence %x Reg(next=io.cpu.req.valid) %x Reg(next=io.cpu.req.ready) %x\n", tlb.io.req.valid, s1_nack, s1_xcpt_valid, tlb.io.resp.miss,tlb.io.resp.paddr, tlb.io.resp.pf.ld, tlb.io.resp.pf.st, tlb.io.resp.pf.inst, tlb.io.resp.ae.ld, tlb.io.resp.ae.st, tlb.io.resp.ae.inst, tlb.io.resp.ma.ld, tlb.io.resp.ma.st, tlb.io.resp.ma.inst,  tlb.io.resp.cacheable, tlb.io.resp.prefetchable, s1_valid_not_nacked,  s1_valid, io.cpu.s1_kill, s1_readwrite, s1_sfence, Reg(next=io.cpu.req.valid), Reg(next=io.cpu.req.ready))
   val s2_isSlavePortAccess = s2_req.phys
   if (usingDataScratchpad) {
     require(!usingVM) // therefore, req.phys means this is a slave-port access
@@ -1092,14 +1113,14 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     io.cpu.resp.bits.replay := true
     io.cpu.resp.bits.addr := s2_uncached_resp_addr
   }
-
-  //printf("[justprintinsts] uncached %b tl.fire %b replay_next %b io.cpu.resp.valid %b s2_valid_hit %b miss_cached %b uncached_pending %b release_state %d =s_ready %b cached_grant_wait %b s1_nack %b \n", grantIsUncachedData, tl_out.d.fire(), io.cpu.replay_next,io.cpu.resp.valid, s2_valid_hit, s2_valid_cached_miss, s2_valid_uncached_pending,release_state, (release_state === s_ready),cached_grant_wait,s1_nack);
+  //printf("[DCache]: io.cpu.resp.valid %x s2_valid_hit %x doUncachedResp %x s2_valid_hit_pre_data_ecc %x modified2_s2_data_error %x s2_waw_hazard %x s2_store_merge %x\n [DCache]: s2_valid_masked %x s2_readwrite %x s2_meta_error %x s2_hit %x\n [DCache]: s2_valid %x Reg(next = !s1_nack) %x s2_valid_pre_xcpt %x io.cpu.s2_xcpt.asUInt.orR %x\n [DCache]: s1_nack %x io.cpu.req.fire %x io.cpu.req.ready %x io.cpu.req.valid %x\n[DCache]: RegNext(s1_xcpt_valid) %x usingDataScratchpad %x\n", io.cpu.resp.valid, s2_valid_hit, doUncachedResp, s2_valid_hit_pre_data_ecc, modified2_s2_data_error, s2_waw_hazard, s2_store_merge, s2_valid_masked, s2_readwrite, s2_meta_error, s2_hit, s2_valid, Reg(next = !s1_nack), s2_valid_pre_xcpt, io.cpu.s2_xcpt.asUInt.orR, s1_nack, io.cpu.req.fire, io.cpu.req.ready, io.cpu.req.valid, RegNext(s1_xcpt_valid), usingDataScratchpad);
+  ////printf("[justprintinsts] uncached %b tl.fire %b replay_next %b io.cpu.resp.valid %b s2_valid_hit %b miss_cached %b uncached_pending %b release_state %d =s_ready %b cached_grant_wait %b s1_nack %b \n", grantIsUncachedData, tl_out.d.fire(), io.cpu.replay_next,io.cpu.resp.valid, s2_valid_hit, s2_valid_cached_miss, s2_valid_uncached_pending,release_state, (release_state === s_ready),cached_grant_wait,s1_nack);
   // load data subword mux/sign extension
  //comment_final_dcache  val s2_data_word = ((0 until rowBits by wordBits).map(i => s2_data_uncorrected(wordBits+i-1,i)): Seq[UInt])(s2_word_idx)
  //comment_final_dcache  val s2_data_word_corrected = ((0 until rowBits by wordBits).map(i => s2_data_corrected(wordBits+i-1,i)): Seq[UInt])(s2_word_idx)
 //comment_final_dcache  val loadgen = new LoadGen(s2_req.typ, mtSigned(s2_req.typ), s2_req.addr, s2_data_word,UInt(0), s2_sc, wordBytes)//change UInt(0) to the modified 32B data
 //  io.cpu.resp.bits.data := loadgen.data | s2_sc_fail
-  //printf("[removecacheincache] %x %x\n", io.cpu.resp.bits.data, io.cpu.resp.bits.DcacheCpu_data(xLen-1, 0))
+  ////printf("[removecacheincache] %x %x\n", io.cpu.resp.bits.data, io.cpu.resp.bits.DcacheCpu_data(xLen-1, 0))
   //io.cpu.resp.bits.data_word_bypass := loadgen.wordData
   //io.cpu.resp.bits.data_raw := s2_data_word
   //io.cpu.resp.bits.store_data := pstore1_data
@@ -1114,10 +1135,10 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   io.cpu.resp.bits.DcacheCpu_vector_data := modified2_s2_data_vector
 
 
-   printf("[checkcachecounter]@@@@@@@incache assign cpu cpu.isvec %b s1_req.isvec %b s2_req.isvec %b resp %x v %b  %x %x  [%x %x %x] s2_sc_fail %x modified2_loadgen.data %x modified2_loadgen.wordData %x\n", io.cpu.req.bits.isvector, s1_req.isvector, s2_req.isvector,  io.cpu.resp.bits.DcacheCpu_data, s2_req.isvector,modified2_s2_data_vector, Cat(UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),modified2_loadgen.data | s2_sc_fail), io.cpu.resp.bits.DcacheCpu_data_word_bypass,io.cpu.resp.bits.DcacheCpu_data_raw,io.cpu.resp.bits.DcacheCpu_vector_data, s2_sc_fail, modified2_loadgen.data, modified2_loadgen.wordData)
-  ///printf("[CacheChecksmainandmodified2] in dcache io.cpu.resp.data main %x modified %x\n", io.cpu.resp.bits.data(xLen-1, 0),io.cpu.resp.bits.DcacheCpu_data(xLen-1, 0) )
-  ///printf("[checkbypassdat] in dcache io.cpu.resp.data main %x modified %x\n", io.cpu.resp.bits.data(xLen-1, 0),io.cpu.resp.bits.DcacheCpu_data(xLen-1, 0))
- /// printf("[checkbypassdat] in dcache io.cpu.resp.data_wrod main %x modified %x\n", io.cpu.resp.bits.data_word_bypass(xLen-1, 0),io.cpu.resp.bits.DcacheCpu_data_word_bypass(xLen-1, 0) 
+   //printf("[checkcachecounter]@@@@@@@incache assign cpu cpu.isvec %b s1_req.isvec %b s2_req.isvec %b resp %x v %b  %x %x  [%x %x %x] s2_sc_fail %x modified2_loadgen.data %x modified2_loadgen.wordData %x\n", io.cpu.req.bits.isvector, s1_req.isvector, s2_req.isvector,  io.cpu.resp.bits.DcacheCpu_data, s2_req.isvector,modified2_s2_data_vector, Cat(UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),modified2_loadgen.data | s2_sc_fail), io.cpu.resp.bits.DcacheCpu_data_word_bypass,io.cpu.resp.bits.DcacheCpu_data_raw,io.cpu.resp.bits.DcacheCpu_vector_data, s2_sc_fail, modified2_loadgen.data, modified2_loadgen.wordData)
+  /////printf("[CacheChecksmainandmodified2] in dcache io.cpu.resp.data main %x modified %x\n", io.cpu.resp.bits.data(xLen-1, 0),io.cpu.resp.bits.DcacheCpu_data(xLen-1, 0) )
+  /////printf("[checkbypassdat] in dcache io.cpu.resp.data main %x modified %x\n", io.cpu.resp.bits.data(xLen-1, 0),io.cpu.resp.bits.DcacheCpu_data(xLen-1, 0))
+ /// //printf("[checkbypassdat] in dcache io.cpu.resp.data_wrod main %x modified %x\n", io.cpu.resp.bits.data_word_bypass(xLen-1, 0),io.cpu.resp.bits.DcacheCpu_data_word_bypass(xLen-1, 0) 
 
   // AMOs
 //  val modified_amoalu_loadgen = new LoadGen(s2_req.typ, mtSigned(s2_req.typ), s2_req.addr, modified2_s2_data_word,UInt(0), s2_sc, wordBytes)
@@ -1130,7 +1151,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
     amoalu.io.cmd := (if (usingAtomicsInCache) pstore1_cmd else M_XWR)
     //needstobereplaced
     amoalu.io.lhs := modified2_s2_data_word//modified2_loadgen.data //right:s2_data_word
-    //comment_final_dcache printf("[removecacheinamoalu] %x %x %x\n", s2_data_word, modified2_loadgen.data, modified2_s2_data_word)
+    //comment_final_dcache //printf("[removecacheinamoalu] %x %x %x\n", s2_data_word, modified2_loadgen.data, modified2_s2_data_word)
     amoalu.io.rhs := pstore1_data
     vector_pstore1_storegen_data := Cat(UInt(1<<64)(63,1),UInt(0),UInt(1<<64)(63,1),UInt(0),UInt(1<<64)(63,1),UInt(0),amoalu.io.out)
     pstore1_storegen_data := amoalu.io.out
@@ -1140,7 +1161,7 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
 
   when (s2_correct) { pstore1_storegen_data := modified2_s2_data_word_corrected //s2_data_word_corrected
                       vector_pstore1_storegen_data := Cat(UInt(1<<64)(63,1),UInt(0),UInt(1<<64)(63,1),UInt(0),UInt(1<<64)(63,1),UInt(0),modified2_s2_data_word_corrected)
-                     //comment_final_dcache  printf("[removecacheinamoalucorrec] %x %x %x \n", s2_data_word_corrected, modified2_loadgen.data, modified2_s2_data_word_corrected)
+                     //comment_final_dcache  //printf("[removecacheinamoalucorrec] %x %x %x \n", s2_data_word_corrected, modified2_loadgen.data, modified2_s2_data_word_corrected)
                     }
 
   // flushes
