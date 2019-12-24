@@ -50,28 +50,33 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
   val start_count = Wire(Bool())
   val req_ready = Reg(init = Bool(true))
   io.req.ready := req_ready
+  val io_req_fire_d1 = Reg(init = Bool(false))
+  io_req_fire_d1 := io.req.fire()
+  val io_req_fire_d2 = Reg(init = Bool(false))
+  io_req_fire_d2 := io_req_fire_d1
 
+
+
+  //printf("[Vector Unit]: io.req.bits.number_of_elements %x n %x io.req.fire() %x counter_num %x io_req_fire_d1 %x\n", io.req.bits.number_of_elements, n, io.req.fire(), counter_num, io_req_fire_d1)
   when (/*io.req.bits.*/ io.req.bits.number_of_elements > n){
-
     when (io.req.fire() && counter_num =/= UInt(1)) {
       req := io.req.bits
       start_count := Bool(true)
       io.resp.valid := Bool(false)
       req_ready := Bool(false)
-//      //printf("[checkcachecounter]@@@VPU in1 \n")
+      //printf("[checkcachecounter]@@@VPU in1 \n")
     } .otherwise {
       start_count := Bool(false)
-      io.resp.valid := Bool(true)
+      io.resp.valid := io_req_fire_d2
       req_ready := Bool(true)
-  //    //printf("[checkcachecounter]@@@VPU in2 \n")
+      //printf("[checkcachecounter]@@@VPU in2 \n")
     }
 
   }.otherwise{
-
     start_count := Bool(false)
-    io.resp.valid := Bool(true)
+    io.resp.valid := io.req.fire()
     req_ready := Bool(true)
-//    //printf("[checkcachecounter]@@@VPU in3 \n")
+    //printf("[checkcachecounter]@@@VPU in3 \n")
   }
 
   when (start_count){
@@ -274,12 +279,12 @@ class Vector_Unit(implicit p: Parameters) extends CoreModule()(p){
  ////printf("[checkcachecounter]invpu2 SZ_ALU_FN.getWidth %d  el#<=8  %b  in1 %x in2 %x in3 %x [v_alu_out %x muladd %x add %x] [req.fn %x fn_vadd %x fn_vmul %x fn_vfmadd %x] \n", SZ_ALU_FN.getWidth, number_of_elements <= n, io.req.bits.in1, io.req.bits.in2, io.req.bits.in3, v_alu_out,Reg_MulAdd_out, Reg_adder_out,io.req.bits.fn, ALU.FN_VADD, ALU.FN_VMUL, ALU.FN_VFMADD)
 
   //////////////////////////////////////////////////////debug statements////////////////////////////////////////////////////////////////////////////////////////////////////
-when (io.resp.valid) {
+//when (io.resp.valid) {
   //printf ("[Valid Vector Unit Response]: Function %x %x Result %x (Reg_adder_out %x) (Reg_redsum_out %x) (number of elements %x) (n %x) (reg_second %x) (adder_out(2) %x)\n", io.req.bits.fn, prev_alu_func, v_alu_out, Reg_adder_out, Reg_redsum_out, io.req.bits.number_of_elements, n, reg_second, adder_out(2))
-}
-when (io.req.valid) {
+//}
+//when (io.req.valid) {
   //printf ("[Valid Vector Unit Request]: Function %x Input Data %x %x %x\n", io.req.bits.fn, io.req.bits.in1, io.req.bits.in2, io.req.bits.in3)
-}
+//}
 
 /*when (io.req.bits.vector){
   //printf("[checkcachecounter]%b@@@VPU in1 %x in2 %x \n", number_of_elements <= n, io.req.bits.in1, io.req.bits.in2)
