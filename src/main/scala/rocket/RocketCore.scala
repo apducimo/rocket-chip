@@ -227,7 +227,7 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
   //val id_vraddr = Vec(2, UInt(256.W))
 
   //val vrf = new  RegFile(31, 256)
-  val vrf = Mem(31, Bits(width = 256.W))
+  val vrf = Mem(32, Bits(width = 256.W))
   val id_vrs = Wire(Vec(3, UInt(256.W)))
   val id_vrs_0 = Wire(UInt(256.W))
   val id_vrs_1 = Wire(UInt(256.W))
@@ -262,7 +262,7 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
     val id_rs_R0 = id_raddr.map(rf.read _)
     id_vrs(0) := id_vrs_R0(0)
     id_vrs_0 := id_vrs_R0(0)
-    printf ("[checkcachecounter]%d num %d idecode is in 1 [mem_cmd %d mem %b vec %b !wxd %b !scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x] \n",csr.io.vl, number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, !id_ctrl.wxd,!id_ctrl.scatter_gather,id_inst(0), id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R0(0), id_vraddr(1), id_vrs_R0(1))
+    //printf ("[checkcachecounter]%d num %d idecode is in 1 [mem_cmd %d mem %b vec %b !wxd %b !scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x] [%d %x]\n",csr.io.vl, number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, !id_ctrl.wxd,!id_ctrl.scatter_gather,id_inst(0), id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R0(0), id_vraddr(1), id_vrs_R0(1), id_raddr3, id_vrs(2))
 
   }.elsewhen (isWrite(id_ctrl.mem_cmd) && id_ctrl.mem && id_ctrl.vec && !id_ctrl.wxd && id_ctrl.scatter_gather )
   {
@@ -274,8 +274,8 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
     val id_rs_R0 = id_raddr.map(rf.read _)
     id_vrs(0) := id_vrs_R0(0)
     id_vrs_0 := id_vrs_R0(0)
-    if (!enableCommitLog)
-    printf ("[checkcachecounter]%d num %d idecode is in 2 [mem_cmd %d mem %b vec %b !wxd %b scatter_gather %b]  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x]\n",csr.io.vl,number_of_elements,id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, !id_ctrl.wxd,id_ctrl.scatter_gather, id_inst(0),id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R0(0), id_vraddr(1), id_vrs_R0(1))
+    //if (!enableCommitLog)
+    //printf ("[checkcachecounter]%d num %d idecode is in 2 [mem_cmd %d mem %b vec %b !wxd %b scatter_gather %b]  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x]\n",csr.io.vl,number_of_elements,id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, !id_ctrl.wxd,id_ctrl.scatter_gather, id_inst(0),id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R0(0), id_vraddr(1), id_vrs_R0(1))
 
   }.elsewhen (isRead(id_ctrl.mem_cmd) && id_ctrl.mem && id_ctrl.vec && id_ctrl.wxd && !id_ctrl.scatter_gather )
   {
@@ -288,7 +288,7 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
     id_vrs(1) := id_vrs_R1(1)
     id_vrs_1 := id_vrs_R1(1)
       
-    printf ("[checkcachecounter]%d  num %d idecode is in 3 [mem_cmd %d mem %b vec_vec %b vec_scalar %b wxd %b !scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x]\n",csr.io.vl,number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec,id_ctrl.vec_scalar, id_ctrl.wxd,!id_ctrl.scatter_gather,id_inst(0),id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R1(0), id_vraddr(1), id_vrs_R1(1))
+    //printf ("[checkcachecounter]%d  num %d idecode is in 3 [mem_cmd %d mem %b vec_vec %b vec_scalar %b wxd %b !scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x]\n",csr.io.vl,number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec,id_ctrl.vec_scalar, id_ctrl.wxd,!id_ctrl.scatter_gather,id_inst(0),id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R1(0), id_vraddr(1), id_vrs_R1(1))
 
   }.elsewhen (isRead(id_ctrl.mem_cmd) && id_ctrl.mem && id_ctrl.vec && id_ctrl.wxd && id_ctrl.scatter_gather )
   {
@@ -301,7 +301,7 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
     id_vrs(1) := id_vrs_R1(1)
     id_vrs_1 := id_vrs_R1(1)
       
-    printf ("[checkcachecounter]%d num %d idecode is in 4 [mem_cmd %d mem %b vec %b vec_scalar %b wxd %b scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x]\n",csr.io.vl, number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, id_ctrl.vec_scalar,id_ctrl.wxd,id_ctrl.scatter_gather,id_inst(0),id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R1(0), id_vraddr(1), id_vrs_R1(1))
+    //printf ("[checkcachecounter]%d num %d idecode is in 4 [mem_cmd %d mem %b vec %b vec_scalar %b wxd %b scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_rs [%d %d] [%d %d] id_vrs [%d %x] [%d %x]\n",csr.io.vl, number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, id_ctrl.vec_scalar,id_ctrl.wxd,id_ctrl.scatter_gather,id_inst(0),id_raddr(0), id_rs_R0(0), id_raddr(1),id_rs_R0(1), id_vraddr(0), id_vrs_R1(0), id_vraddr(1), id_vrs_R1(1))
   }.otherwise {
 
     id_vraddr := IndexedSeq(id_raddr1,id_raddr2,id_raddr3)
@@ -309,8 +309,8 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
     id_vrs(2) := vrf(id_raddr3) 
     id_vrs(0) := vrf(id_raddr1) 
     id_vrs(1) := vrf(id_raddr2)
-    when (id_ctrl.vec){
-    printf ("[checkcachecounter]++++++++++++++++%d id_raddr %x %x  num %d idecode is in 4 [mem_cmd %d mem %b vec %b wxd %b scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_vrs [%d %d %d] [%x %x %x] \n",csr.io.vl, id_raddr1, id_raddr2, number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, id_ctrl.wxd,id_ctrl.scatter_gather,id_inst(0), id_vraddr(0), id_vraddr(1), id_vraddr(2), id_vrs(0), id_vrs(1), id_vrs(2))}
+    //when (id_ctrl.vec){
+    //printf ("[checkcachecounter]++++++++++++++++%d id_raddr %x %x  num %d idecode is in 4 [mem_cmd %d mem %b vec %b wxd %b scatter_gather %b] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@ %x id_vrs [%d %d %d] [%x %x %x] \n",csr.io.vl, id_raddr1, id_raddr2, number_of_elements, id_ctrl.mem_cmd, id_ctrl.mem, id_ctrl.vec, id_ctrl.wxd,id_ctrl.scatter_gather,id_inst(0), id_vraddr(0), id_vraddr(1), id_vraddr(2), id_vrs(0), id_vrs(1), id_vrs(2))}
 
   }
  
@@ -408,7 +408,7 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
     ((ex_reg_valid || (!ex_ctrl.mem && vector_unit.io.resp.valid))  && ex_ctrl.wxd  && ex_ctrl.vec, ex_waddr, v_mem_reg_wdata),
     (((mem_reg_valid && !ctrl_stalld) || (wb_reg_valid && !ctrl_stalld))  && mem_ctrl.wxd && !mem_ctrl.mem  && mem_ctrl.vec, mem_waddr, v_wb_reg_wdata),
     (((mem_reg_valid && !ctrl_stalld) || (wb_reg_valid && !ctrl_stalld))  && mem_ctrl.wxd  && mem_ctrl.vec, mem_waddr,vector_dcache_bypass_data))
-  printf("[Rocket Core]: ex_waddr %x v_mem_reg_wdata %x mem_waddr %x v_wb_reg_wdata %x mem_waddr %x vector_dcache_bypass_data %x\n", ex_waddr, v_mem_reg_wdata, mem_waddr, v_wb_reg_wdata, mem_waddr, vector_dcache_bypass_data)
+  //printf("[Rocket Core]: ex_waddr %x v_mem_reg_wdata %x mem_waddr %x v_wb_reg_wdata %x mem_waddr %x vector_dcache_bypass_data %x\n", ex_waddr, v_mem_reg_wdata, mem_waddr, v_wb_reg_wdata, mem_waddr, vector_dcache_bypass_data)
 
   val vector_id_bypass_src = id_vraddr.map(vraddr => vector_bypass_sources.map(s => s._1 && s._2 === vraddr))
 
@@ -426,17 +426,17 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
   val v_ex_reg_rs_bypass = Reg(Vec(id_vraddr.size, Bool()))
   val v_ex_reg_rs_lsb = Reg(Vec(id_vraddr.size, UInt(width = log2Ceil(vector_bypass_sources.size))))
   val v_ex_reg_rs_msb = Reg(Vec(id_vraddr.size, UInt()))
+  val v_ex_reg_rss = Reg(Vec(id_vraddr.size, UInt()))
   val ex_vrs = for (i <- 0 until id_vraddr.size)
     yield Mux(v_ex_reg_rs_bypass(i), vector_bypass_mux(v_ex_reg_rs_lsb(i)), Cat(v_ex_reg_rs_msb(i), v_ex_reg_rs_lsb(i)))
-  printf("Rocket Core]: id_vraddr.size %x vector_bypass_sources.size %x\n", id_vraddr.size, vector_bypass_sources.size)
-  for (i <- 0 until id_vraddr.size) {
-    printf ("[Rocket Core]: ex_vrs(%x) %x v_ex_reg_rs_bypass(%x) %x v_ex_reg_rs_lsb(%x) %x v_ex_reg_rs_msb(%x) %x Cat(v_ex_reg_rs_msb(%x), v_ex_reg_rs_lsb(%x)) %x\n", i, ex_vrs(i), i, v_ex_reg_rs_bypass(i), i, v_ex_reg_rs_lsb(i), i, v_ex_reg_rs_msb(i), i, i, Cat(v_ex_reg_rs_msb(i), v_ex_reg_rs_lsb(i)))
-  }
+  //printf("Rocket Core]: id_vraddr.size %x vector_bypass_sources.size %x id_vrs(0) %x id_vrs(1) %x id_vrs(2) %x id_raddr3 %x\n", id_vraddr.size, vector_bypass_sources.size, id_vrs(0), id_vrs(1), id_vrs(2), id_raddr3)
+  //for (i <- 0 until id_vraddr.size) {
+    //printf ("[Rocket Core]: ex_vrs(%x) %x v_ex_reg_rs_bypass(%x) %x v_ex_reg_rs_lsb(%x) %x v_ex_reg_rs_msb(%x) %x Cat(v_ex_reg_rs_msb(%x), v_ex_reg_rs_lsb(%x)) %x v_ex_reg_rss(%x) %x\n", i, ex_vrs(i), i, v_ex_reg_rs_bypass(i), i, v_ex_reg_rs_lsb(i), i, v_ex_reg_rs_msb(i), i, i, Cat(v_ex_reg_rs_msb(i), v_ex_reg_rs_lsb(i)), i, v_ex_reg_rss(i))
+  //}
 
 /*  //printf("[checkcachecounter]~~~~~~~~~~~~~~~~~ [ ex_reg_valid %b && ex_ctrl.wxd %b && ex_ctrl.vec %b , ex_waddr %x, v_mem_reg_wdata %x] [(mem_reg_valid %b && !ctrl_stalld %b) && mem_ctrl.wxd %b && !mem_ctrl.mem %b && mem_ctrl.vec %b, mem_waddr %x, v_wb_reg_wdata %x] [(mem_reg_valid %b && !ctrl_stalld %b) && mem_ctrl.wxd %b && mem_ctrl.vec %b , mem_waddr %x ,vector_dcache_bypass_data %x)] \n", ex_reg_valid, ex_ctrl.wxd, ex_ctrl.vec, ex_waddr, v_mem_reg_wdata, mem_reg_valid, !ctrl_stalld, mem_ctrl.wxd, !mem_ctrl.mem , mem_ctrl.vec, mem_waddr, v_wb_reg_wdata, mem_reg_valid, !ctrl_stalld, mem_ctrl.wxd , mem_ctrl.vec, mem_waddr, vector_dcache_bypass_data)
   //printf("[checkcachecounter]~~~~~~~~~~~~~~~~~ v_ex_reg_rs_bypass(0) %x (1) %x  vector_bypass_mux(v_ex_reg_rs_lsb(0)) %x (1) %x  Cat(v_ex_reg_rs_msb(0) %x, v_ex_reg_rs_lsb(0) %x) %x  (1) %x , (1) %x => %x\n", v_ex_reg_rs_bypass(0), v_ex_reg_rs_bypass(1), vector_bypass_mux(v_ex_reg_rs_lsb(0)),v_ex_reg_rs_msb(0) , v_ex_reg_rs_lsb(0) , Cat(v_ex_reg_rs_msb(0), v_ex_reg_rs_lsb(0)), v_ex_reg_rs_msb(1), v_ex_reg_rs_lsb(1), Cat(v_ex_reg_rs_msb(1), v_ex_reg_rs_lsb(1)))*/
   val ex_reg_rss = Reg(Vec(id_raddr.size, UInt()))
-  val v_ex_reg_rss = Reg(Vec(id_vraddr.size, UInt()))
   val temp_ex_vrs = for (i <- 0 until id_raddr.size) yield ex_reg_rss(i)
  val temp_ex_imm = ImmGen(ex_ctrl.sel_imm, ex_reg_inst)
 
@@ -546,6 +546,7 @@ class Rocket(implicit p: Parameters) extends CoreModule()(p)
         v_ex_reg_rs_msb(i) := id_vrs(i) >> log2Ceil(vector_bypass_sources.size)
         v_ex_reg_rss(i) := id_vrs(i)
       }
+      //printf("[Rocket Core]: id_vren(%x) %x v_do_bypass %x\n", i, id_vren(i), v_do_bypass)
 
     }
 
@@ -1067,12 +1068,29 @@ when(wb_xcpt /* && (wb_cause ===  "hf".U) */)
 //  val vrf_wdata = Mux((stride_vld === UInt(1) || wb_ctrl.vec_scalar) && !wb_ctrl.scatter_gather, vrf_wdata_unit_stride, vrf_wdata_gather)
  val vrf_wdata = Mux(((stride_vld === UInt(1) || wb_ctrl.vec_scalar) && !wb_ctrl.scatter_gather) || !wb_ctrl.mem, vrf_wdata_unit_stride, vrf_wdata_gather)
 
-  printf("[checkcachecounter] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ vrf_waddr %x vrf_wen %b [vwb_wen %b [stride_vld %x cnt_cache %x !wb_ctrl.scatter_gather %b] ==>vwb_wen_unit_stride %b [wb_ctrl.vec_scalar %b !wb_ctrl.scatter_gather %b] ==>vwb_wen_vec_scalar %b vwb_wen_gather %b ]vrf_wdata %x [vrf_wdata_unit_stride %x [number_of_elements <= number_of_lanes %b v_wb_reg_wdata %x v_alu_out %x]vrf_wdata_gather %x]\n", vrf_waddr,vrf_wen, vwb_wen, stride_vld, cnt_cache, !wb_ctrl.scatter_gather, vwb_wen_unit_stride, wb_ctrl.vec_scalar,  !wb_ctrl.scatter_gather, vwb_wen_vec_scalar, vwb_wen_gather,vrf_wdata, vrf_wdata_unit_stride,number_of_elements <= number_of_lanes,v_wb_reg_wdata,v_alu_out,  vrf_wdata_gather)
+  //printf("[checkcachecounter] @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ vrf_waddr %x vrf_wen %b [vwb_wen %b [stride_vld %x cnt_cache %x !wb_ctrl.scatter_gather %b] ==>vwb_wen_unit_stride %b [wb_ctrl.vec_scalar %b !wb_ctrl.scatter_gather %b] ==>vwb_wen_vec_scalar %b vwb_wen_gather %b ]vrf_wdata %x [vrf_wdata_unit_stride %x [number_of_elements <= number_of_lanes %b v_wb_reg_wdata %x v_alu_out %x]vrf_wdata_gather %x]\n", vrf_waddr,vrf_wen, vwb_wen, stride_vld, cnt_cache, !wb_ctrl.scatter_gather, vwb_wen_unit_stride, wb_ctrl.vec_scalar,  !wb_ctrl.scatter_gather, vwb_wen_vec_scalar, vwb_wen_gather,vrf_wdata, vrf_wdata_unit_stride,number_of_elements <= number_of_lanes,v_wb_reg_wdata,v_alu_out,  vrf_wdata_gather)
   when (vrf_wen) {
     /*vrf.write(vrf_waddr, vrf_wdata)*/
-    printf("[Vector Register File Write] - Address : %x, Data : %x\n", vrf_waddr, vrf_wdata)
+    printf("[Vector Register File Write] - Address : %x, Data : %x masked %x \n", vrf_waddr, vrf_wdata, vrf_wdata & UInt("h00000000000000000000000000000000ffffffffffffffffffffffffffffffff"))
     //printf("[Rocket Core]: vrf_wdata_unit_stride %x vrf_wdata_gather %x\n io.dmem.resp.valid %x vrf_mem_value %x number_of_elements %x number_of_lanes %x v_wb_reg_wdata %x v_alu_out %x\n", vrf_wdata_unit_stride, vrf_wdata_gather, io.dmem.resp.valid, vrf_mem_value, number_of_elements, number_of_lanes, v_wb_reg_wdata, v_alu_out)
-    vrf(vrf_waddr) := vrf_wdata
+    when       (number_of_elements === 0) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h0000000000000000000000000000000000000000000000000000000000000000")
+    }.elsewhen (number_of_elements === 1) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h00000000000000000000000000000000000000000000000000000000ffffffff") 
+    }.elsewhen (number_of_elements === 2) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h000000000000000000000000000000000000000000000000ffffffffffffffff")
+    }.elsewhen (number_of_elements === 3) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h0000000000000000000000000000000000000000ffffffffffffffffffffffff")
+    }.elsewhen (number_of_elements === 4) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h00000000000000000000000000000000ffffffffffffffffffffffffffffffff")
+    }.elsewhen (number_of_elements === 5) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h000000000000000000000000ffffffffffffffffffffffffffffffffffffffff")
+    }.elsewhen (number_of_elements === 6) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffff")
+    }.elsewhen (number_of_elements === 7) {
+      vrf(vrf_waddr) := vrf_wdata & UInt("h00000000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+    }.otherwise {
+      vrf(vrf_waddr) := vrf_wdata}
   }
 
   // hook up control/status regfile
@@ -1475,7 +1493,7 @@ when(wb_xcpt /* && (wb_cause ===  "hf".U) */)
            val offset_reduction = UInt(32) - io.dmem.req.bits.addr(4,0)
            val vsd_element      = offset_reduction / UInt(4)
            io.dmem.req.bits.element_number := Mux(vsd_element > number_of_elements, number_of_elements, vsd_element)
-           printf("[checkcachecounter]???? cnt_cache_vsd=0  ++++++++__________************** io.dmem.req.bits.addr %x  vsd cnt_cache_vsd===0 ex_rs(0) %x alu.io.adder_out %x offset_vsd %x  offset_reduction %x vsd_element %x io.dmem.req.bits.element_number %x element_number %x dmem_resp_valid %b io.dmem.s1_kill %b  io.dmem.DcacheCpu_s1_data.data %x\n", io.dmem.req.bits.addr,ex_rs(0), alu.io.adder_out,offset_vsd, offset_reduction, vsd_element, io.dmem.req.bits.element_number, number_of_elements, io.dmem.resp.valid, io.dmem.s1_kill, io.dmem.DcacheCpu_s1_data.data)
+           //printf("[checkcachecounter]???? cnt_cache_vsd=0  ++++++++__________************** io.dmem.req.bits.addr %x  vsd cnt_cache_vsd===0 ex_rs(0) %x alu.io.adder_out %x offset_vsd %x  offset_reduction %x vsd_element %x io.dmem.req.bits.element_number %x element_number %x dmem_resp_valid %b io.dmem.s1_kill %b  io.dmem.DcacheCpu_s1_data.data %x\n", io.dmem.req.bits.addr,ex_rs(0), alu.io.adder_out,offset_vsd, offset_reduction, vsd_element, io.dmem.req.bits.element_number, number_of_elements, io.dmem.resp.valid, io.dmem.s1_kill, io.dmem.DcacheCpu_s1_data.data)
 
 
       }.elsewhen(/*wb_ctrl.vec && wb_ctrl.mem && !wb_ctrl.wxd*/cnt_cache_vsd =/= UInt(0)){
@@ -1488,14 +1506,14 @@ when(wb_xcpt /* && (wb_cause ===  "hf".U) */)
                   val vsd_element      = offset_reduction / UInt(4)
                   io.dmem.req.bits.element_number := number_of_elements - vsd_element
                   io.dmem.DcacheCpu_s1_data.data := temp_for_dmem_write_data >> (vsd_element * UInt(4) * UInt(8))
-                  printf("[checkcachecounter]????? cnt_cache_vsd > 0 unit_stride++++++++__________************** vsd checkboundary>32 io.dmem.req.bits.addr %x ex_rs(0) %x alu.io.adder_out %x  prev_addr_offset_vsd %x  offset_reduction %x vsd_element %x io.dmem.req.bits.element_number %x io.dmem.s1_kill %b io.dmem.req.valid %b io.dmem.DcacheCpu_s1_data.data %x\n", io.dmem.req.bits.addr, ex_rs(0), alu.io.adder_out,prev_address_offset_vsd, offset_reduction, vsd_element, io.dmem.req.bits.element_number,io.dmem.s1_kill, io.dmem.req.valid, io.dmem.DcacheCpu_s1_data.data)
+                  //printf("[checkcachecounter]????? cnt_cache_vsd > 0 unit_stride++++++++__________************** vsd checkboundary>32 io.dmem.req.bits.addr %x ex_rs(0) %x alu.io.adder_out %x  prev_addr_offset_vsd %x  offset_reduction %x vsd_element %x io.dmem.req.bits.element_number %x io.dmem.s1_kill %b io.dmem.req.valid %b io.dmem.DcacheCpu_s1_data.data %x\n", io.dmem.req.bits.addr, ex_rs(0), alu.io.adder_out,prev_address_offset_vsd, offset_reduction, vsd_element, io.dmem.req.bits.element_number,io.dmem.s1_kill, io.dmem.req.valid, io.dmem.DcacheCpu_s1_data.data)
                 }.otherwise{
                   io.dmem.req.bits.addr := encodeVirtualAddress(ex_rs(0), alu.io.adder_out)
                   val offset_reduction = UInt(32) - io.dmem.req.bits.addr(4,0)
                   val vsd_element      = offset_reduction / UInt(4)
                   io.dmem.req.bits.element_number := Mux(vsd_element > number_of_elements, number_of_elements, vsd_element)
                   io.dmem.DcacheCpu_s1_data.data := temp_for_dmem_write_data
-                  printf("[checkcachecounter]????? cnt_cache_vsd > 0 unitstride ++++++++__________************** vsd checkboundary<32 io.dmem.req.bits.addr %x ex_rs(0) %x alu.io.adder_out %x  offset_reduction %x vsd_element %x io.dmem.req.bits.element_number %x io.dmem.s1_kill %b io.dmem.DcacheCpu_s1_data.data %x\n", io.dmem.req.bits.addr, ex_rs(0), alu.io.adder_out,offset_reduction, vsd_element, io.dmem.req.bits.element_number, io.dmem.s1_kill, io.dmem.DcacheCpu_s1_data.data)
+                  //printf("[checkcachecounter]????? cnt_cache_vsd > 0 unitstride ++++++++__________************** vsd checkboundary<32 io.dmem.req.bits.addr %x ex_rs(0) %x alu.io.adder_out %x  offset_reduction %x vsd_element %x io.dmem.req.bits.element_number %x io.dmem.s1_kill %b io.dmem.DcacheCpu_s1_data.data %x\n", io.dmem.req.bits.addr, ex_rs(0), alu.io.adder_out,offset_reduction, vsd_element, io.dmem.req.bits.element_number, io.dmem.s1_kill, io.dmem.DcacheCpu_s1_data.data)
                 }
 
 
@@ -1507,7 +1525,7 @@ when(wb_xcpt /* && (wb_cause ===  "hf".U) */)
                 io.dmem.DcacheCpu_s1_data.data := temp_for_dmem_write_data
                 io.dmem.req.valid := Mux(replay_after_miss_vsd, Bool(true), cache_s1_valid_value_vsd && !io.dmem.resp.valid && ex_reg_valid_vlsd_vssd)
                 io.dmem.s1_kill := killm_common_vlsd_vssd //Bool(false)
-                printf("[checkcachecounter]????? scatter store ex_rs(0) %x alu.io.adder_out %x io.dmem.req.bits.addr %x offset_vsd %x io.dmem.req.valid %b !io.dmem.resp.valid %b cache_s1_valid_value %b replay_after_miss %b ex_reg_valid_vlsd_vssd %b killm_common_vlsd_vssd %b io.dmem.s1_kill %b io.dmem.DcacheCpu_s1_data.data %x\n", ex_rs(0), alu.io.adder_out, io.dmem.req.bits.addr,offset_vsd,io.dmem.req.valid, !io.dmem.resp.valid, cache_s1_valid_value, replay_after_miss, ex_reg_valid_vlsd_vssd,killm_common_vlsd_vssd, io.dmem.s1_kill, io.dmem.DcacheCpu_s1_data.data)
+                //printf("[checkcachecounter]????? scatter store ex_rs(0) %x alu.io.adder_out %x io.dmem.req.bits.addr %x offset_vsd %x io.dmem.req.valid %b !io.dmem.resp.valid %b cache_s1_valid_value %b replay_after_miss %b ex_reg_valid_vlsd_vssd %b killm_common_vlsd_vssd %b io.dmem.s1_kill %b io.dmem.DcacheCpu_s1_data.data %x\n", ex_rs(0), alu.io.adder_out, io.dmem.req.bits.addr,offset_vsd,io.dmem.req.valid, !io.dmem.resp.valid, cache_s1_valid_value, replay_after_miss, ex_reg_valid_vlsd_vssd,killm_common_vlsd_vssd, io.dmem.s1_kill, io.dmem.DcacheCpu_s1_data.data)
            }
       }
   }.otherwise{//not vector store/load
@@ -1515,7 +1533,7 @@ when(wb_xcpt /* && (wb_cause ===  "hf".U) */)
      io.dmem.req.bits.addr := encodeVirtualAddress(ex_rs(0), alu.io.adder_out)
      io.dmem.s1_kill := killm_common || mem_ldst_xcpt
      io.dmem.DcacheCpu_s1_data.data := temp_for_dmem_write_data
-      printf("[checkcachecounter] ===================================> inside otherwise for memory address %x  ex_rs(0) %x alu.io.adder_out %x data %x temp %x io.dmem.s1_kill %b \n", io.dmem.req.bits.addr, ex_rs(0), alu.io.adder_out, io.dmem.DcacheCpu_s1_data.data, temp_for_dmem_write_data, io.dmem.s1_kill)
+      //printf("[checkcachecounter] ===================================> inside otherwise for memory address %x  ex_rs(0) %x alu.io.adder_out %x data %x temp %x io.dmem.s1_kill %b \n", io.dmem.req.bits.addr, ex_rs(0), alu.io.adder_out, io.dmem.DcacheCpu_s1_data.data, temp_for_dmem_write_data, io.dmem.s1_kill)
   }
 
   //printf("[RocketCore]: io.dmem.s1_kill %x killm_common_vlsd_vssd %x killm_common %x mem_ldst_xcpt %x\n ex_ctrl.vec %x ex_ctrl.mem %x ex_ctrl.wxd %x cnt_cache %x wb_ctrl.vec %x wb_ctrl.mem %x stride_vld %x cnt_cache_vsd %x\n dcache_kill_mem %x take_pc_wb %x mem_reg_xcpt %x mem_reg_valid %x\n", io.dmem.s1_kill, killm_common_vlsd_vssd, killm_common, mem_ldst_xcpt, ex_ctrl.vec, ex_ctrl.mem, ex_ctrl.wxd, cnt_cache, wb_ctrl.vec, wb_ctrl.mem, stride_vld, cnt_cache_vsd, dcache_kill_mem, take_pc_wb, mem_reg_xcpt, mem_reg_valid)
@@ -1529,7 +1547,7 @@ when(wb_xcpt /* && (wb_cause ===  "hf".U) */)
 
   // io.dmem.DcacheCpu_s1_data.data
   temp_for_dmem_write_data := Mux(mem_ctrl.vec,v_mem_reg_rs2(255,0),Cat(UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),UInt(1<<64)(63,1),UInt (0),(if (fLen == 0) mem_reg_rs2 else Mux(mem_ctrl.fp, Fill((xLen max fLen) / fLen, io.fpu.store_data), mem_reg_rs2))))
-  printf ("[Rocket Core]: temp_for_dmem_write_data %x mem_ctrl.vec %x v_mem_reg_rs2 %x fLen %x mem_reg_rs2 %x mem_ctrl.fp %x xLen %x (xLen max fLen) %x io.fpu.store_data %x mem_reg_rs2 %x\n", temp_for_dmem_write_data, mem_ctrl.vec, v_mem_reg_rs2, fLen, mem_reg_rs2, mem_ctrl.fp, xLen, (xLen max fLen), io.fpu.store_data, mem_reg_rs2)
+  //printf ("[Rocket Core]: temp_for_dmem_write_data %x mem_ctrl.vec %x v_mem_reg_rs2 %x fLen %x mem_reg_rs2 %x mem_ctrl.fp %x xLen %x (xLen max fLen) %x io.fpu.store_data %x mem_reg_rs2 %x\n", temp_for_dmem_write_data, mem_ctrl.vec, v_mem_reg_rs2, fLen, mem_reg_rs2, mem_ctrl.fp, xLen, (xLen max fLen), io.fpu.store_data, mem_reg_rs2)
 
   io.rocc.cmd.valid := wb_reg_valid && wb_ctrl.rocc && !replay_wb_common
   io.rocc.exception := wb_xcpt && csr.io.status.xs.orR
@@ -1818,7 +1836,7 @@ when(wb_xcpt /* && (wb_cause ===  "hf".U) */)
 
     printf("[checkcachecounterfuncs]id_inst DASM(%x) [pc %x inst %x id_ctrl.legal %b valid %b]\n (pc %x inst %x scatter %b v %b vec %b mem %b)ex  DASM(%x)\n (pc %x inst %x scatter %b v %b vec %b mem %b)mem DASM(%x)\n (pc %x inst %x scatter %b v %b vec %b mem %b)wb DASM(%x)\n vwb_wen %b vrf_mem_value %x \n stride_vld %x cnt_cache %x wb_ctrl.scatter_gather %x wb_ctrl.vec_scalar %x vwb_wen_unit_stride %x vwb_wen_vec_scalar %x vwb_wen_gather %x wb_valid %x io.dmem.resp.valid %x wb_ctrl.wxd %x wb_ctrl.vec %x\n ctrl_killd %x csr.io.interrupt %x ibuf.io.inst(0).bits.replay %x\n ibuf.io.inst(0).valid %x take_pc_mem_wb %x ctrl_stalld %x ex_ctrl.vec_scalar %x io.dmem.req.bits.is_cache_access_vec %x io.dmem.req.bits.element_number %x\n ex_ctrl.mem_type %x id_ctrl.mem_type %x\n id_ctrl.csr %x ex_ctrl.csr %x mem_ctrl.csr %x wb_ctrl.csr %x id_ctrl.rxs2 %x ex_ctrl.rxs2 %x\n", id_inst(0), ibuf.io.pc,id_inst(0), id_ctrl.legal,ibuf.io.inst(0).valid, ex_reg_pc,ex_reg_inst, ex_ctrl.scatter_gather, ex_reg_valid, ex_ctrl.vec, ex_ctrl.mem,  ex_reg_inst,mem_reg_pc, mem_reg_inst, mem_ctrl.scatter_gather, mem_reg_valid, mem_ctrl.vec,mem_ctrl.mem, mem_reg_inst,wb_reg_pc, wb_reg_inst, wb_ctrl.scatter_gather, wb_reg_valid, wb_ctrl.vec, wb_ctrl.mem, wb_reg_inst,vwb_wen,vrf_mem_value, stride_vld, cnt_cache, wb_ctrl.scatter_gather, wb_ctrl.vec_scalar, vwb_wen_unit_stride, vwb_wen_vec_scalar, vwb_wen_gather, wb_valid, io.dmem.resp.valid, wb_ctrl.wxd, wb_ctrl.vec, ctrl_killd, csr.io.interrupt, ibuf.io.inst(0).bits.replay, ibuf.io.inst(0).valid, take_pc_mem_wb, ctrl_stalld, ex_ctrl.vec_scalar, io.dmem.req.bits.is_cache_access_vec, io.dmem.req.bits.element_number, ex_ctrl.mem_type, id_ctrl.mem_type, id_ctrl.csr, ex_ctrl.csr, mem_ctrl.csr, wb_ctrl.csr, id_ctrl.rxs2, ex_ctrl.rxs2)
 
-    printf("[Rocket Core Stall]: id_ex_hazard %x id_mem_hazard %x id_wb_hazard %x id_sboard_hazard %x\n csr.io.singleStep %x ex_reg_valid %x mem_reg_valid %x wb_reg_valid %x\n id_ctrl.fp %x id_stall_fpu %x id_ctrl.mem %x dcache_blocked %x\n id_ctrl.rocc %x rocc_blocked %x  id_ctrl.div %x div.io.req.ready %x\n div.io.resp.valid %x wb_wxd %x div.io.req.valid %x stall_vec_exe %x  id_do_fence %x  csr.io.csr_stall %x\n ctrl_stalld_cond_vld %x locks_vld %x ctrl_stalld_cond_vsd %x locks_vsd %x\n take_pc  %x id_xcpt %x ex_xcpt %x mem_ldst_xcpt %x mem_xcpt %x wb_xcpt %x\n", id_ex_hazard , id_mem_hazard , id_wb_hazard , id_sboard_hazard , csr.io.singleStep , ex_reg_valid , mem_reg_valid , wb_reg_valid , id_ctrl.fp , id_stall_fpu , id_ctrl.mem , dcache_blocked , id_ctrl.rocc , rocc_blocked ,  id_ctrl.div , div.io.req.ready , div.io.resp.valid , wb_wxd , div.io.req.valid , stall_vec_exe ,  id_do_fence ,  csr.io.csr_stall , ctrl_stalld_cond_vld , locks_vld , ctrl_stalld_cond_vsd , locks_vsd , take_pc  , id_xcpt , ex_xcpt , mem_ldst_xcpt , mem_xcpt , wb_xcpt)
+    //printf("[Rocket Core Stall]: id_ex_hazard %x id_mem_hazard %x id_wb_hazard %x id_sboard_hazard %x\n csr.io.singleStep %x ex_reg_valid %x mem_reg_valid %x wb_reg_valid %x\n id_ctrl.fp %x id_stall_fpu %x id_ctrl.mem %x dcache_blocked %x\n id_ctrl.rocc %x rocc_blocked %x  id_ctrl.div %x div.io.req.ready %x\n div.io.resp.valid %x wb_wxd %x div.io.req.valid %x stall_vec_exe %x  id_do_fence %x  csr.io.csr_stall %x\n ctrl_stalld_cond_vld %x locks_vld %x ctrl_stalld_cond_vsd %x locks_vsd %x\n take_pc  %x id_xcpt %x ex_xcpt %x mem_ldst_xcpt %x mem_xcpt %x wb_xcpt %x\n", id_ex_hazard , id_mem_hazard , id_wb_hazard , id_sboard_hazard , csr.io.singleStep , ex_reg_valid , mem_reg_valid , wb_reg_valid , id_ctrl.fp , id_stall_fpu , id_ctrl.mem , dcache_blocked , id_ctrl.rocc , rocc_blocked ,  id_ctrl.div , div.io.req.ready , div.io.resp.valid , wb_wxd , div.io.req.valid , stall_vec_exe ,  id_do_fence ,  csr.io.csr_stall , ctrl_stalld_cond_vld , locks_vld , ctrl_stalld_cond_vsd , locks_vsd , take_pc  , id_xcpt , ex_xcpt , mem_ldst_xcpt , mem_xcpt , wb_xcpt)
 
  // //printf("[checkcachecounter] mem_br_taken %b alu.io.cmp_out %b branch [%b %b %b %b  %x %x %b] take_pc[%b %b %b %b] fence %b replay [ex %b mem %b mem_reg_replay %b] xcpt [%b memint %b ex_int %b wb_exception %b wb_cause %x] ctrl_kill[%b %b %b %b] kill_v[%b %b] killm_common_vlsd_vssd [dcache_kill_mem %b|| take_pc_wb %b|| mem_reg_xcpt %b] dmem_replay_next %b dcache_blocked %b dmem_s1_kill %b io.dmem.resp.valid %b dmem_resp %x\n",mem_br_taken, alu.io.cmp_out, mem_direction_misprediction, mem_misprediction, mem_wrong_npc, mem_cfi_taken, mem_npc, ex_reg_pc, ex_pc_valid, take_pc, take_pc_mem, take_pc_wb, take_pc_wb, mem_reg_sfence, replay_ex, replay_mem, mem_reg_replay, mem_reg_xcpt, mem_reg_xcpt_interrupt, ex_reg_xcpt_interrupt,wb_xcpt, wb_cause, ctrl_killd, ctrl_killx, ctrl_killm, ctrl_stalld, ctrl_killd_vlsd_vssd, killm_common_vlsd_vssd, dcache_kill_mem, take_pc_wb, mem_reg_xcpt,io.dmem.replay_next, dcache_blocked, io.dmem.s1_kill, io.dmem.resp.valid, io.dmem.resp.bits.DcacheCpu_data(255,0))
 
