@@ -122,9 +122,17 @@ class DCacheDataArray_modified2(implicit p: Parameters) extends L1HellaCacheModu
       printf ("[checkcachecounter]@@@@@@@@@@@@@@@incache vector el# %x write %xx  nways %x vwwords %x  vector addr %x shifteddata %x wdata %x wdata %x veccmask %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b vwMask %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b %b%b%b%b%b%b%b%b\n io.req.bits.isvec %x io.req.bits.vec_scalar %x\n",io.req.bits.element_number,io.req.bits.write, nWays,vwWords(0),io.req.bits.addr, (io.req.bits.vwdata << (io.req.bits.addr(4,0) * UInt(8)))(255,0), io.req.bits.vwdata,io.req.bits.wdata,veccMask(31),veccMask(30),veccMask(29),veccMask(28),veccMask(27),veccMask(26),veccMask(25),veccMask(24),veccMask(23),veccMask(22),veccMask(21),veccMask(20),veccMask(19),veccMask(18),veccMask(17),veccMask(16),veccMask(15),veccMask(14),veccMask(13),veccMask(12),veccMask(11),veccMask(10),veccMask(9),veccMask(8),veccMask(7),veccMask(6),veccMask(5),veccMask(4),veccMask(3),veccMask(2),veccMask(1),veccMask(0), vwMask(127), vwMask(126),vwMask(125), vwMask(124), vwMask(123), vwMask(122),vwMask(121),vwMask(120), vwMask(119), vwMask(118), vwMask(117), vwMask(116), vwMask(115), vwMask(114), vwMask(113), vwMask(112), vwMask(111), vwMask(110), vwMask(109), vwMask(108), vwMask(107), vwMask(106), vwMask(105), vwMask(104), vwMask(103), vwMask(102), vwMask(101), vwMask(100), vwMask(99), vwMask(98), vwMask(97), vwMask(96), io.req.bits.isvec, io.req.bits.vec_scalar)
       //printf ("[checkcachecounter] vector sel %b %b %b %b \n", sel3, sel2, sel1, sel0)
     }
+
+    //val old_addr = Reg(UInt(width=8))
+    //old_addr := addr
+    //val prevdata = array.read(old_addr, valid || !valid)
+
+    //printf("[DCache]: Previous Access Check Addr %x Data %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x\n", old_addr, prevdata(127),prevdata(32),prevdata(31),prevdata(30),prevdata(29),prevdata(28),prevdata(27),prevdata(26),prevdata(25),prevdata(24),prevdata(23),prevdata(22),prevdata(21),prevdata(20),prevdata(19),prevdata(18),prevdata(17),prevdata(16),prevdata(15),prevdata(14),prevdata(13),prevdata(12),prevdata(11),prevdata(10),prevdata(9),prevdata(8),prevdata(7),prevdata(6),prevdata(5),prevdata(4), prevdata(3), prevdata(2), prevdata(1),prevdata(0))
+
     val data = array.read(addr, valid && !io.req.bits.write)//4*32B is read
-    //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@incache read data from cache %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x\n",   data(127),data(32),data(31),data(30),data(29),data(28),data(27),data(26),data(25),data(24),data(23),data(22),data(21),data(20),data(19),data(18),data(17),data(16),data(15),data(14),data(13),data(12),data(11),data(10),data(9),data(8),data(7),data(6),data(5),data(4), data(3), data(2), data(1),data(0))
+    printf("[checkcachecounter]@@@@@@@@@@@@@@@@@incache read data from cache [%x(%x)] %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x%x%x%x%x%x%x %x%x\n", addr, io.req.bits.addr,  data(127),data(32),data(31),data(30),data(29),data(28),data(27),data(26),data(25),data(24),data(23),data(22),data(21),data(20),data(19),data(18),data(17),data(16),data(15),data(14),data(13),data(12),data(11),data(10),data(9),data(8),data(7),data(6),data(5),data(4), data(3), data(2), data(1),data(0))
     data.grouped(32).map(_.asUInt).toSeq //grouped into 4 32B
+
   }
 
   val temprdata0= rdata(0).asUInt
@@ -767,10 +775,10 @@ class DCacheModule(outer: DCache) extends HellaCacheModule(outer) {
   dataArb.io.in(0).bits.cnt_cache_vsd  := Mux(pstore2_valid, pstore2_cnt_cache_vsd, pstore1_cnt_cache_vsd)
   dataArb.io.in(0).bits.element_number := io.cpu.req.bits.element_number
 
-   printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache dataarb.io.in0 for write  valid %x write %x addr %x element# %x access_type %x dataArb.io.in(0).bits.vwdata %x pstore2_valid %x vector_pstore2_storegen_data %x vector_pstore1_data %x\n", dataArb.io.in(0).valid, dataArb.io.in(0).bits.write, dataArb.io.in(0).bits.addr,dataArb.io.in(0).bits.element_number, dataArb.io.in(0).bits.vector_cache_access_type, dataArb.io.in(0).bits.vwdata, pstore2_valid, vector_pstore2_storegen_data, vector_pstore1_data)
+   //printf("[checkcachecounter]@@@@@@@@@@@@@@@@@@@@incache dataarb.io.in0 for write  valid %x write %x addr %x element# %x access_type %x dataArb.io.in(0).bits.vwdata %x pstore2_valid %x vector_pstore2_storegen_data %x vector_pstore1_data %x\n", dataArb.io.in(0).valid, dataArb.io.in(0).bits.write, dataArb.io.in(0).bits.addr,dataArb.io.in(0).bits.element_number, dataArb.io.in(0).bits.vector_cache_access_type, dataArb.io.in(0).bits.vwdata, pstore2_valid, vector_pstore2_storegen_data, vector_pstore1_data)
 
   when (pstore2_isvec){
-    printf("[trackloadsnew] pstore2==>dataarray  vwdata %x  isvec %b  \n", dataArb.io.in(0).bits.vwdata,dataArb.io.in(0).bits.isvec)
+    //printf("[trackloadsnew] pstore2==>dataarray  vwdata %x  isvec %b  \n", dataArb.io.in(0).bits.vwdata,dataArb.io.in(0).bits.isvec)
   }
   //zazad ends
   dataArb.io.in(0).bits.wordMask := UIntToOH(Mux(pstore2_valid, pstore2_addr, pstore1_addr).extract(rowOffBits-1,offsetlsb))
